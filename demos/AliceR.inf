@@ -1,0 +1,571 @@
+! Through the Looking-Glass
+! An Inform tutorial by Gareth Rees
+! All rights given away
+! Version 3
+
+!Include "CyrDef";
+
+Constant Story "СКВОЗЬ ЗЕРКАЛО";
+
+Constant Headline
+	"^Маленькая интерактивная Информ-обучалка^
+	 (написанная Гаретом Ризом и переведенная Денисом Гаевым)^";
+
+Include "Parser";
+Include "VerbLib";
+
+! Cостояние котят:
+Constant HELD_STATE = 0;     ! (у Алисы в руках)
+Constant QUEEN_STATE = 1;    ! (играет с Черной Королевой)
+Constant WOOL_STATE = 2;     ! (играет с клубком шерсти)
+Constant CHAIR_STATE = 3;    ! (на пути к стулу)
+
+[ Initialise;
+    location = Drawing_Room;
+    give Player female;
+
+    StartDaemon(white_kitten);
+    StartDaemon(black_kitten);
+
+    print
+    "^^Хотя за окном стоит холодный зимний день,
+     за зеркалом над каминной полкой почему-то еще продолжается лето!^
+     Так хочется оказаться там!^
+     Ну неужели не существует никакого способа попасть ЗА зеркало?^^";
+
+];
+
+[ Inside x y;
+    do {
+        x = parent(x);
+    } until (x == 0 or y);
+    if (x == 0) rfalse;
+];
+
+[ UntangleSub; "Что, распутать ЭТО?!"; ];
+
+
+[ ReflectSub;
+    if (second ~= mirror)
+	"Сюрреализму этой идеи позавидовал бы и сам Льюис Кэрролл!";
+
+    if (noun == hearth or mirror ||
+       (player notin mantelpiece && player notin armchair))
+        "Но Алисе вряд ли удастся поднести это к зеркалу!";
+
+    print "Отражение ";
+    if (noun == player) print "Алисы";
+    else print (cGen) noun;
+    print " в зеркале выглядит ";
+    if (player in mantelpiece) "слишком уж расплывчатым и размытым.";
+    print "точь-в-точь как настоящ", (AEnd) noun, " ";
+
+    if (noun == player) print "Алиса";
+    else print (cNom) noun;
+    " -- только левая и правая сторона поменялись местами!";
+];
+
+Object  Drawing_Room "Гостиная"
+ has    light
+ with   name 'снег' 'снежинки',
+        description
+        "Там, за оконной рамой, беззвучно парят снежинки и властвует холод.
+         Алиса так рада, что она внутри, в тепле и уюте!
+         Гостиная отражается в большом зеркале, висящем на стене
+         над каминной полкой. И гостиная, и ее отражение в зеркале одинаково уютные --
+         с жарко пылающим камином, мягким ковриком перед ним,
+         и глубоким удобным креслом, в котором можно свернуться
+         клубочком и немного подремать.",
+
+        before [;
+            if (player notin Mantelpiece) rfalse;
+         Exit,Go:
+            if (noun == d_obj or out_obj)
+                "Таким путем вряд ли удастся спуститься с каминной полки!";
+
+         Examine,Enter,ThrowAt,ThrownAt,Reflect,Touch: ;
+
+         default:
+            if (inp1 ~= 1 && noun ~= 0 && Inside(noun,mantelpiece) == 0)
+               "Отсюда трудно дотянуться до ", (cGen) noun, ".";
+            if (inp2 ~= 1 && second ~= 0 && Inside(second,mantelpiece) == 0)
+               "Отсюда трудно дотянуться до ", (cGen) second, ".";
+        ];
+
+Object  red_queen "Черн/ая Королев/а"
+ has    female
+ with   name 'черн' 'королев' 'ферз',
+        describe [;
+            if (white_kitten.state == QUEEN_STATE
+             || black_kitten.state == QUEEN_STATE)
+                rtrue;
+        ],
+        description "Маленькая (но какая своенравная!) шахматная фигурка.",
+        after [;
+         Take:
+            if (white_kitten.state == QUEEN_STATE) 
+                white_kitten.state = CHAIR_STATE;
+            if (black_kitten.state == QUEEN_STATE) 
+                black_kitten.state = CHAIR_STATE;
+         PutOn,Transfer,Insert:
+            if (second == chess_board)
+                "В гордом одиночестве на шахматной доске, Черная Королева --
+                 самодержавная повелительница 32 белых и 32 черных клеток.";
+        ];
+
+Object  chess_board "шахматн/ая доск/а" Drawing_Room
+ has    supporter female
+ with   name 'шахматн' 'доск' 'шахмат',
+        initial "На полу лежит раскрытая шахматная доска.",
+        description
+        "На полу лежала раскрытая шахматная доска с недоигранной партией.
+         Но ни одной фигурки на ней уже не осталось --
+         котята играют с ними в менее интеллектуальные игры.";
+
+Object  hearth "камин/" Drawing_Room
+ has    scenery male
+ with   name 'камин' 'огон' 'плям' 'решетк',
+ description "За бронзовой каминной решеткой весело потрескивает огонь.";
+
+Object  rug "каминн/ый коврик/" Drawing_Room
+ has    concealed static supporter enterable male
+        ! general, если под ним уже найдена Черная Королева
+ with   name 'каминн' 'ковер' 'коврик' 'мягк' 'красив' 'индийск' 'арабск',
+        description
+        "Красивый каминный коврик из какой-то далекой страны --
+            может быть, Индии или Аравии.",
+
+        before [;
+         Take:
+         	"Но коврик слишком большой и тяжелый!";
+         Push,Pull:
+		"Но место каминного коврика -- рядом с камином!";
+         LookUnder:
+            if (player in mantelpiece || player in armchair)
+                "Отсюда вряд ли возможно дотянуться до коврика!";
+            if (player in self)
+                "Алиса попыталась приподнять угол коврика, но потерпела неудачу.
+                 Причиной оказалось то, что она стояла прямо на нем.
+                 Мм-да, мир полон неожиданностей.";
+            if (self hasnt general) {
+                give self general;
+                move red_queen to player;
+                "Алиса приподняла угол коврика -- и, заглянув под него,
+                 обнаружила там Черную Королеву из шахматного набора!";
+            }
+        ];
+
+Object  armchair "кресл/о" Drawing_Room
+ has    static concealed supporter enterable neuter
+        ! general, если оно придвинуто к камину
+ with   name 'кресл' 'стул' 'сидень',
+        description [;
+            "Большое глубокое кресло. Отличное место для котенка
+             или маленькой девочки, где можно устроиться поудобнее и подремать.
+             Сейчас оно стоит рядом с ",
+             (string) IIF (self has general, "камином", "окном"), ".";
+             ],
+
+        before [ i;
+         Push,Pull:
+            if (player notin Drawing_Room)
+                "Для начала необходимо покинуть ", (cAcc) (parent(player)), ".";
+            if (white_kitten in player || black_kitten in player)
+                "Только не с котенком в руках!";
+            if (white_kitten.state == CHAIR_STATE) i = white_kitten;
+            else if (black_kitten.state == CHAIR_STATE) i = black_kitten;
+            if (i ~= 0)
+                "Начав двигать кресло, Алиса обнаружила, что ", (cNom) i,
+                " находится прямо на его пути. Хорошо, что она заметила это
+                  вовремя -- а то могла бы просто раздавить бедное создание!";
+            if (self has general) {
+                give self ~general;
+                "Алиса отодвинула кресло дальше от камина.";
+            }
+            give self general;
+            "Алиса придвинула кресло ближе к камину.";
+
+         Transfer:
+            "[Если так уж хочется сдвинуть кресло с места,
+              попробуйте тянуть или толкать его.]";
+
+         Climb,Enter:
+            move player to armchair;
+            "Алиса забралась с ногами в мягкое удобное кресло.";
+
+         Take:
+            "Но кресло слишком тяжелое для маленькой девочки!";
+        ];
+
+Object  mantelpiece "каминн/ая полк/а" Drawing_Room
+ has    concealed supporter enterable static female
+ with   name 'каминн' 'полк',
+        description
+        "Она довольно высоко (гораздо выше, чем Алиса может достать),
+         но зато выглядит достаточно прочной и широкой,
+         чтобы на ней можно было стоять без риска.",
+        before [;
+         Enter,Climb:
+	    if (player in self)
+		"Но Алиса уже на ней!";
+            if (player notin armchair)
+                "Каминная полка слишком высоко, чтобы до нее достать.";
+            if (armchair hasnt general)
+                "Отсюда невозможно дотянуться до каминной полки!";
+            if (children(player) > 0)
+                "Для этого руки должны быть свободны!";
+            move player to mantelpiece;
+            "Алиса ловко вскарабкалась на каминную полку.";
+         PutOn,LetGo:
+            if (player notin self &&
+               (player notin armchair || armchair hasnt general))
+                "Полка слишком высоко, за пределами досягаемости.";
+        ];
+
+Object  mirror "зеркал/о" Drawing_Room
+ has    static concealed neuter
+ with   name 'зеркал' 'стекл',
+        description [;
+            if (player in mantelpiece)
+                "Невероятно -- но стеклянная поверхность зеркала
+                 тает на глазах, подобно призрачному серебристому пару!";
+            if (player in armchair)
+                "В зеркале отражается хорошо знакомая гостиная -- в ней
+                 все такое же, как и по эту сторону, только наоборот.
+                 Но почему-то Алиса уверена в том, что за краем зеркала,
+                 куда никак невозможно заглянуть, лежит мир Зазеркалья --
+                 и он совершенно не похож на привычный...";
+            "Отсюда в зеркале можно разглядеть только потолок гостиной.
+             Впрочем, он ничем не отличается от потолка по эту сторону зеркала.";
+        ],
+        before [;
+            if (action ~= ##Examine or ##ThrownAt or ##Reflect &&
+                player notin mantelpiece)
+                "Отсюда невозможно даже дотянуться до зеркала!";
+
+         Touch,Pull,Push:
+            "Рука проходит сквозь серебристый туман, не встречая сопротивления!";
+
+         ThrownAt: "И заработать семь лет несчастий и бед?!";
+
+         Enter:
+            ! Добро пожаловать в Зазеркалье!
+            ! (а игра, увы, кончается ;)
+            deadflag = 2;
+            "Рука Алисы без труда прошла через серебряный туман...
+             за ней последовало остальное тело...
+             и вот она уже по ту сторону зеркала!!!";
+        ];
+
+Object  worsted "клуб/о/к/ шерсти" Drawing_Room
+        ! general, если он спутан
+ has    male
+ with   name 'клубок' 'клубк' 'шерст' 'голуб',
+
+	casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'о', 0);
+	],
+
+        describe [;
+            if (white_kitten.state ~= WOOL_STATE &&
+                black_kitten.state ~= WOOL_STATE)
+                "^На полу лежит клубок шерсти.";
+            rtrue;
+        ],
+        description [;
+            if (self has general)
+                "Сейчас он спутан так, что почти не размотаешь.
+                 Сколько времени Алиса потратила на то, чтобы намотать шерсть
+                 аккуратным клубком -- и вот, теперь на него страшно взглянуть!";
+            "Клубок очень хорошей голубой шерсти, готовый к вязанию.";
+        ],
+
+        before [;
+         Untangle: 
+            if (self has general) {
+            give self ~general;
+            "Это оказалось не быстрым и не простым делом...
+             зато теперь клубок совсем как новый -- тугой и аккуратный!";
+            }
+            "Но шерсть не спутана!";
+        ],
+        after [;
+         Take:
+            if (white_kitten.state == WOOL_STATE) 
+                white_kitten.state = CHAIR_STATE;
+            if (black_kitten.state == WOOL_STATE) 
+                black_kitten.state = CHAIR_STATE;
+        ];
+
+! NB: от этого пользы мало
+#iftrue 0;
+
+Object  chess_pieces "шахматн/ые фигур/ы" Drawing_Room
+ has    scenery pluralname
+ with   parse_name [ w colour n;
+            w = NextWord();
+            if (w == 'белый' or 'черный') {
+                n ++;
+                colour = w;
+                w = NextWord();
+            }
+            if (w == 'пешка' or 'ладья' or 'тура' ||
+                w == 'конь' or 'слон' or 'офицер' ||
+                w == 'король' || (w == 'королева' && 
+                (colour == 'белая' || rug hasnt general))) return n + 1;
+            return 0;
+        ],
+        before [;
+            "Похоже, что именно эта фигурка куда-то запропала.
+             И где ее теперь искать? Ох, уж эти шаловливые котята!";
+        ];
+
+#endif;
+
+Object  window "окн/о" Drawing_Room
+ has    scenery neuter
+ with   name 'окн' 'рам',
+        description
+        "За окном неторопливо кружатся снежинки,
+         заставляющие Алису радоваться, что она внутри дома, в тепле и уюте.",
+        before [;
+         Open:
+         "И подхватить простуду?! Лучше оставить окно закрытым.";
+         Search: <<Examine self>>;
+        ];
+
+! NB: этот код для котят все равно правильно не работает
+#iftrue 0;
+
+    parse_name [ w ok n;
+            do {
+                ok = 0;
+                w = NextWord();
+                if (w == 'котята') {
+                    ok = 1; n++; parser_action=##PluralFound; 
+                }
+                if (w == 'котенок' or 'кот' || 
+                    w == ((self.&name)-->0)) { 
+                    ok = 1; n++;
+                }
+            } until (ok == 0);
+            return n;
+        ],
+
+#endif;
+
+Class   Kitten
+ has    animate male
+        ! general, если на этом ходу уже было дано описание
+
+ with	name 'кот' 'котенок' 'котенк' 'котят',
+
+        state CHAIR_STATE,
+
+	casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'о', 0);
+	],
+
+        describe [ i;
+            switch (self.state) {
+             QUEEN_STATE:
+                "^", (CCNom) self, " играет с Черной Королевой.";
+             WOOL_STATE:
+                "^", (CCNom) self, " играет с клубком шерсти.";
+             CHAIR_STATE:
+                if (self has general) rtrue;
+                if ((self.other_kitten).state == CHAIR_STATE) {
+                    i = self.other_kitten;
+                    give i general;
+                    "^Пара котят резвятся друг с другом на коврике рядом с креслом.";
+                }
+                "^", (CCNom) self, " резвится на коврике рядом с креслом.";
+             default: rtrue;
+            }
+        ],
+
+        description [;
+            "Какой красивый котенок! Из пары именно он -- Алисин любимчик,
+             и намного симпатичней ей, чем непослушный и непоседливый ",
+             (cNom) self.other_kitten, ".";
+        ],
+
+        life [;
+         Ask, Answer, Order:
+            print_ret (CCNom) self, ", шевеля усами, смотрит на Алису
+            	с таким умным видом, что она почти готова поверить,
+            	будто он понимает каждое ее слово.";
+
+         Kiss:
+            "Алиса чмокнула ", (cAcc) self, " в носик,
+             и тот взглянул на нее сконфуженно, но довольно.";
+
+         Attack:
+            "Разве можно напасть на такое крохотное и беззащитное создание!";
+
+         Show: 
+            print_ret (CCNom) self, ", протянув лапку, опасливо дотронулся до ",
+            (cGen) noun, ".";
+
+         Give, ThrowAt:
+	    ! TMP: предмет может быть другим котенком!
+	    ! обработать этот случай
+            if (noun ~= red_queen or worsted) {
+                if (action == ##ThrowAt) {
+                    move noun to Drawing_Room;
+                    print "Алиса бросила ", (cAcc) noun, " на пол, и ",
+                        (cNom) self;
+                }
+                else print (CCNom) self;
+                " рассматривает ", (cAcc) noun, " с озадаченным видом.";
+            }
+
+            print "Алиса бросила ", (cAcc) noun, " на пол. Немедленно ",
+            (cNom) self;
+            if (self in player)
+                print ", выскользнув из ее рук,";
+            move noun to Drawing_Room;
+            move self to Drawing_Room;
+            print " бросился за ", (cIns) noun;
+            if (noun == worsted) {
+                give worsted general;
+                self.state = WOOL_STATE;
+                print ", мгновенно превратив его в дикую путаницу";
+            }
+            else self.state = QUEEN_STATE;
+            ".";
+        ],
+        before [;
+         Take:
+            if (self.other_kitten in player)
+                "Двух котят сразу Алисе ни за что не удержать!";
+            self.state = HELD_STATE;
+            move self to player;
+            "Алиса взяла на руки ", (cAcc) self, ".
+             Ну что за прелестное создание!";
+         Touch, Rub:
+            print_ret (CCNom) self, " в ответ потерся головой об Алисину руку
+            	и что-то тихонько промурлыкал.";
+        ],
+        after [;
+         Drop:
+            self.state = CHAIR_STATE;
+            move self to Drawing_Room;
+            print_ret (CCNom) self, ", выскользнув из рук Алисы, убежал прочь.";
+         Transfer, PutOn, Insert:
+            self.state = CHAIR_STATE;
+            print (CCNom) self, ", спрыгнув с ", (cGen) parent (self);
+            move self to Drawing_Room;
+            ", ловко приземлился на полу и убежал прочь.";
+        ],
+        daemon [ i;
+            give self ~general;
+            self.this_kittens_turn = 1 - self.this_kittens_turn;
+            if (self.this_kittens_turn == false || random(3) == 2) rtrue;
+            new_line;
+            print (CCNom) self;
+            switch (self.state) {
+             HELD_STATE:
+                switch(random(5)) {
+                 1: " жалобно мяукнул.";
+                 2: " тихо мурлыкнул.";
+                 3: " удовлетворенно промурлыкал что-то.";
+                 4: " потерся ушками о руку Алисы.";
+                 5: move self to Drawing_Room;
+                    self.state = CHAIR_STATE;
+                    " спрыгнул на пол, ловко выскользнув из Алисиных рук.";
+                }
+
+             QUEEN_STATE:
+                switch (random(5)) {
+                 1: " ткнул Черную Королеву лапкой.";
+                 2: " оставив на время игру, сидит с подчеркнуто невинным видом.";
+                 3: " катает бедную Королеву туда-сюда по полу.";
+                 4: " кончил умываться и осматривается по сторонам.";
+                 5: " взял Черную Королеву, укусил, и начал яростно трясти,
+                     чтобы убедиться, что с ней покончено.";
+                }
+
+             WOOL_STATE:
+                give worsted general;
+                switch (random(5)) {
+                 1: " ткнул клубок шерсти лапкой.";
+                 2: " покатил клубок по полу, преследуя его по пятам.";
+                 3: " сцепился с клубком в жестокой схватке.";
+                 4: " прыгнул на клубок сверху,
+                      и окончательно запутался в мешанине шерстяных нитей.";
+                 5: " прервав игру, чешет себя за ушами.";
+                }
+
+             CHAIR_STATE:
+                if ((self.other_kitten).state == CHAIR_STATE && random(2) == 1) {
+                    i = random(5);
+                    switch (i) {    
+                     1: print " преследует ";
+                     2: print " прыгнул на ";
+                     3: print " умывает лапкой ";
+                     4: print " обежал вокруг ";
+                     5: print " ткнул ";
+                    }
+                    print (cAcc) self.other_kitten;
+                    switch (i) {
+                     1,3: ".";
+                     2: " и они вместе покатились по полу.";
+                     4: " и бросился за ним.";
+                     5: " лапкой.";
+                    }
+                }
+                switch (random(5)) {
+                 1: " гоняет по полу комок пыли.";
+                 2: " катается по полу.";
+                 3: " сидит и тщательно вылизывает свой хвост.";
+                 4: " трется головой о ножки кресла.";
+                 5: " гоняется за своим хвостом.";
+                }
+            }
+        ];
+
+Kitten  white_kitten "бел/ый котен/о/к/" Drawing_Room
+ with   name 'бел',
+        this_kittens_turn false,
+        other_kitten black_kitten;
+
+Kitten  black_kitten "черн/ый котен/о/к/" Drawing_Room
+ with   name 'черн',
+        this_kittens_turn true,
+        other_kitten white_kitten;
+
+!
+! Дополнительные глаголы
+!
+
+Include "RussiaG";
+
+! расширение "смотреть":
+! - смотреть на NOUN в SECOND
+! - смотреть в SECOND на NOUN
+Extend 'см' last
+    * 'на' cAcc_noun 'в' cPre_noun -> Reflect
+    * 'в' cPre_noun 'на' cAcc_noun -> Reflect reverse;
+
+! Для клубка шерсти:
+! "размотать"/"распутать"
+Verb 'размот' 'распут'
+    * cAcc_noun -> Untangle;
+
+Object "размотать" VerbDepot
+	with name 'размот';
+
+Object "распутать" VerbDepot
+	with name 'распут';
+
+! Для котят:
+! "гладить"/"ласкать"
+Verb 'глад' 'ласк' = 'тер';
+
+Object "гладить" VerbDepot
+	with name 'глад';
+
+Object "ласкать" VerbDepot
+	with name 'ласк';
+

@@ -1,0 +1,104 @@
+!%
+!=============================================================================
+Constant Story "Хейди";
+Constant Headline
+    "^Пример простой игры на Inform.
+     ^Авторы: Роджер Фирт (Roger Firth) и Соня Кессерих (Sonja Kesserich).
+     ^Перевод Юрия Салтыкова a.k.a. G.A. Garinson^";
+     
+Constant MAX_CARRIED 1;
+
+Include "Parser";
+Include "VerbLib";
+!============================================================================
+! Описание игровых объектов
+
+Object before_cottage "Перед домом"
+    with description
+            "Ты стоишь около избушки, на восток от которой раскинулся лес.",
+        e_to forest,
+        in_to "Такой славный денек... Он слишком хорош, чтобы прятаться внутри.",
+        cant_go "Единственный путь ведет на восток.",
+    has light;
+    
+Object cottage "маленьк/ий домик/" before_cottage
+    with description "Домик мал и неказист, но ты очень счастлива, живя здесь.",
+        name 'маленьк' 'дом' 'изб' 'терем' 'коттедж' 'хат' 'небольш' 'строен'
+            'домик' 'избушк' 'теремок' 'хатк',
+        before [;
+            Enter:
+                print_ret "Такой славный денек... 
+                    Он слишком хорош, чтобы прятаться внутри.";
+            ],
+        has scenery male;
+
+Object forest "В лесной чаще"
+    with description
+            "На западе, сквозь густую листву, можно разглядеть небольшое строение.
+            Тропинка ведет на северо-восток",
+        w_to before_cottage,
+        ne_to clearing,
+    has light;
+
+Object bird "птенчик/" forest
+    with description "Слишком мал, чтобы летать, птенец беспомощно попискивает.",
+        name 'детеныш' 'птиц' 'птичк' 'птенчик' 'птенц' 'маленьк',
+        before [;
+            Listen:
+                print "Жалобный писк испуганной птички разрывает тебе сердце. 
+                    Надо помочь!^";
+                return true;
+        ],
+    has male;
+
+Object clearing "Полянка"
+    with description
+            "Посреди полянки стоит высокий платан.
+             Тропинка вьется меж деревьев, уводя на юго-запад.",
+        sw_to forest,
+        u_to top_of_tree,
+    has light;
+
+Object nest "птичь/е гнезд/о" clearing
+    with description "Гнездо сплетено из прутиков и аккуратно устлано мхом.",
+        name 'птичь' 'гнезд' 'гнездышк' 'пруть' 'прутик' 'мох',
+    has container open neuter;
+
+Object tree "высок/ий платан/" clearing
+    with description
+        "Величавое дерево стоит посреди поляны.
+         Кажется, по его стволу будет несложно влезть наверх.",
+        name 'высок' 'платан' 'дерев' 'ствол' 'величав',
+        before [;
+            Climb:
+                PlayerTo(top_of_tree);
+                return true;
+        ],
+    has scenery male;
+
+Object top_of_tree "На верхушке дерева"
+    with description "На этой высоте цепляться за ствол уже не так удобно.",
+        d_to clearing,
+        after [;
+            Drop:
+                move noun to clearing;
+                return false;
+        ],
+    has light;
+
+Object branch "надежн/ый толст/ый сук/" top_of_tree
+    with description "Сук достаточно ровный и крепкий, чтобы на нем надежно 
+                      держалось что-то не очень большое.",
+        name 'надежн' 'ровн' 'толст' 'крепк' 'сук' 'ветк',
+        each_turn [; if (bird in nest && nest in branch) deadflag = 2; ],
+    has static supporter male;
+
+!============================================================================
+! Entry point routines
+[ Initialise; location = before_cottage;];
+
+!============================================================================
+! Stanard and extended grammar
+Include "RussiaG";
+
+!============================================================================

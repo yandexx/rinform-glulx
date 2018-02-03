@@ -1,0 +1,3673 @@
+! ----------------------------------------------------------------------------
+!  Advent 030904                      Демонстрационная игра для системы Информ
+!
+!
+!                                      Adapted to Inform 5: 17.5.94 to 24.5.94
+!                 Modernised to Inform 5.5 and library 5/12 or later: 20.12.95
+!                    Modernised to Inform 6 and library 6/1 or later: 11.11.96
+!                     A few bugs removed and companion text rewritten: 9.12.96
+!						      Русская версия: 20.10.03
+! ----------------------------------------------------------------------------
+
+Constant Story "ПРИКЛЮЧЕНИЕ (сентябрь 2004)";
+
+Constant Headline
+           "^Интерактивное начало начал^
+             Оригинал:^
+             Уилл Краутер (Will Crowther, 1973) и Дон Вудз (Don Woods, 1977)^
+             Реконструкция:^
+             Дональд Экман (Donald Ekman), Дэвид Бэджетт (David M. Baggett, 1993)
+             и Грэхем Нельсон (Graham Nelson, 1994)^
+             [Посвящается памяти Стивена Бишопа (1820?--1857): GN]^
+             ^
+             Русская версия: Денис Гаев (2003)^
+             ^
+             [Если Вы играете в первый раз, введите ~помощь~.]^";
+
+Release 3;
+
+Constant MAX_CARRIED = 7;
+Constant MAX_SCORE = 350;
+Constant MAX_TREASURES = 15;
+Constant AMUSING_PROVIDED;
+
+Include "Parser";
+Include "VerbLib";
+
+!Constant CANTGO_SHOWROOMS;
+!Constant CANTGO_EXITS;
+!Include "SmartCantGo";
+
+Attribute nodwarf;
+Attribute treasure_found;
+Attribute multitude;
+
+Global caves_closed;
+Global canyon_from;
+Global treasures_found;
+Global deaths;
+Global dark_warning;
+Global feefie_count;
+
+! ----------------------------------------------------------------------------
+!   Общий суперкласс для всех "кладов" игры
+! ----------------------------------------------------------------------------
+
+Class Treasure
+ with depositpoints 10,
+      after
+      [; Take: if (location==Inside_Building)
+                    score=score-self.depositpoints;
+               score=score+5;
+               if (noun hasnt treasure_found)
+               {   give noun treasure_found; treasures_found++;
+                   score=score+2;
+               }
+               "Вы это взяли.";
+         Drop: score=score-5;
+               if (location==Inside_Building)
+               {   score=score+self.depositpoints;
+                   "Вы положили это в надежное место.";
+               }
+      ];
+
+! ----------------------------------------------------------------------------
+!   На открытом воздухе...
+! ----------------------------------------------------------------------------
+
+Class AboveGround
+  has  light nodwarf;
+
+AboveGround At_End_Of_Road "У конца дороги"
+  with description
+	"Вы находитесь у самого конца дороги недалеко от небольшого кирпичного строения.
+	 Со всех сторон Вас окружает густой лес.
+	 Небольшой ручей, вытекающий из строения, продолжает свой путь вниз по оврагу.",
+       w_to At_Hill_In_Road, u_to At_Hill_In_Road, e_to Inside_Building,
+       d_to In_A_Valley, s_to In_A_Valley, n_to In_Forest_1,
+       in_to Inside_Building;
+
+Object "кирпичн/ый дом/"
+  with name 'кирпичн' 'дом' 'домик' 'строен' 'исток' 'источник' 'колодец',
+       description "Просто небольшой кирпичный домик.
+                    Исток ручья находится где-то внутри него.",
+       found_in  At_End_Of_Road  At_Hill_In_Road  Inside_Building
+  has  scenery male;
+
+Object Stream "бурн/ый руч/е//й"
+  with name 'руче' 'ручь' 'речк' 'поток' 'вод',
+       found_in At_End_Of_Road In_A_Valley At_Slit_In_Streambed In_Pit
+       		In_Cavern_With_Waterfall At_Reservoir Inside_Building,
+       description "Холодный бурный ручей струится вниз по каменистому руслу.",
+
+       casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'е', 'ь');
+	],
+
+       before
+       [; Drink:
+	"Вы сделали несколько глотков из ручья.
+	 Вода имеет сильный привкус минералов, но это ее не портит.
+	 Правда, она очень холодная.";
+
+          Take: if (bottle notin player) "Вам не в чем нести воду!";
+                <<Fill bottle>>;
+
+          Insert: if (second == bottle) <<Fill bottle>>;
+                    "В это нельзя налить воду.";
+
+          Receive: if (noun == ming_vase) {
+                remove ming_vase; move shards to location; score=score-5;
+                "Внезапное охлаждение мгновенно превратило бесценную вазу в горсть осколков.";
+                }
+                if (noun == bottle) <<Fill bottle>>;
+                remove noun;
+                if (noun ofclass Treasure) score=score-5;
+                print_ret (cNom) noun, " унесен", (SAEnd) noun, " ручьем вниз по течению!";
+       ],
+  has  scenery male;
+
+Object "грязн/ая дорог/а"
+  with name 'дорог' 'путь' 'улиц' 'троп',
+       description "Вместо желтых кирпичей, дорога покрыта камнями и грязью.",
+       found_in  At_End_Of_Road  At_Hill_In_Road  In_Forest_2
+  has  scenery female;
+
+Object "густ/ой лес/"
+  with name 'густ' 'лес' 'дерев' 'лист' 'куст' 'ростк' 'росток',
+       description
+       "По преимуществу, лес состоит из дубов и кленов,
+	однако сосны и ели также встречаются нередко. Березовые и ясеневые ростки,
+	и кустарник самых разнообразных видов образуют густой подлесок.
+	В это время года обильная листва сильно ограничивает видимость,
+	однако идти растительность не слишком мешает.",
+       found_in At_End_Of_Road At_Hill_In_Road In_A_Valley In_Forest_1 In_Forest_2
+  has  scenery multitude male;
+
+AboveGround At_Hill_In_Road "На холме у дороги"
+  with description
+  	"Вы поднялись на самую вершину холма, но не вышли из леса.
+	 Дорога продолжается по ту сторону холма.
+	 Невдалеке виднеется белый кирпичный домик.",
+       e_to At_End_Of_Road,
+       n_to At_End_Of_Road,
+       d_to At_End_Of_Road,
+       s_to In_Forest_1;
+
+Object -> "просто холм/"
+  with name 'холм' 'пригорок' 'подъем' 'склон',
+  description "Ничем не примечательный холм.",
+  has  scenery male;
+
+Object -> "друг/ой склон/ холма"
+  with name 'склон' 'сторон',
+       description "Кто мешает изучить его самому?",
+  has  scenery male;
+
+AboveGround Inside_Building "Внутри строения"
+  with description "Вы внутри белого дома, из которого вытекает ручей.",
+       cant_go "Ручей вытекает через пару труб футового диаметра.
+                Единственный выход из дома находится в западной стене.",
+       before
+       [; Enter: if (noun==Spring or SewerPipes)
+             "Трубы, через которые вытекает ручей, диаметром всего в один фут.
+	      Лучше попробуйте выйти через дверь.";
+          Xyzzy: if (In_Debris_Room hasnt visited) rfalse;
+                 PlayerTo(In_Debris_Room); rtrue;
+          Plugh: if (At_Y2 hasnt visited) rfalse;
+                 PlayerTo(At_Y2); rtrue;
+       ],
+       w_to At_End_Of_Road,
+       out_to At_End_Of_Road,
+       in_to "Эти трубы определенно узковаты для Вас.";
+
+Object -> Spring "исток/ ручья"
+  with name 'исток' 'руче' 'ручь',
+       description "Ручей вытекает наружу через пару труб футового диаметра."
+  has  scenery male;
+
+Object -> SewerPipes "пар/а сточных труб диаметром в один фут"
+  with name 'пар' 'футов' 'сточн' 'труб',
+       description "Они слишком узкие. Единственный выход наружу к западу отсюда."
+  has  scenery female;
+
+Object -> set_of_keys "набор/ ключей"
+  with name 'ключ' 'набор' 'связк',
+       description "Всего лишь набор различных ключей.",
+       initial "Прямо на полу лежит связка ключей.",
+       before
+       [; Count: "Их дюжина, или около того."; ]
+  has male;
+
+Object -> tasty_food "вкусн/ая ед/а"
+  with name 'вкусн' 'ед' 'пищ' 'паек' 'пайк' 'рацион',
+       description "Выглядит вполне аппетитно!",
+       initial "Здесь имеется и кое-какая еда.",
+       after
+       [; Eat: "Довольно вкусно!"; ],
+  has  edible female;
+
+Object -> brass_lantern "латунн/ая ламп/а"
+  with name 'латунн' 'ламп' 'фонар' 'светильник',
+
+       when_on  "Ваша лампа поблизости испускает яркий свет.",
+       when_off "Рядом тускло поблескивает лампа из латуни.",
+
+       power_remaining 330,
+       replace_batteries
+       [;  if (fresh_batteries in player or location)
+           {   remove fresh_batteries; give fresh_batteries general;
+               move old_batteries to location;
+               self.power_remaining = 2500;
+               "Батарейки успешно заменены.";
+           }
+       ],
+
+       daemon
+       [ t; if (self hasnt on) { StopDaemon(self); rtrue; }
+         t = --(self.power_remaining);
+
+         if (t==0) give self ~on ~light;
+
+         if (self in player || self in location)
+         {   if (t==0)
+             {   
+                 print "Энергия батареек совсем иссякла!";
+                 if (fresh_batteries notin player && location hasnt light)
+                 {   deadflag=3;
+                     " Без лампы исследование пещеры невозможно.
+		       Так что игра -- увы -- проиграна.";
+                 }
+                 else self.replace_batteries();
+                 new_line; rtrue;
+             }  
+             if (t==30)
+             {   print "Свет вашей лампы заметно тускнеет.";
+                 if (fresh_batteries has general)
+                     " А запасных батареек у Вас нет. 
+                      Кажется, Вам пора закругляться.";
+                 if (fresh_batteries in VendingMachine
+                     && Dead_End_14 has visited)
+                     " Или поищите свежие батарейки.
+			Кажется, где-то в лабиринте попадался торговый автомат?
+			Только не забудьте прихватить и денежки!";
+                 if (fresh_batteries notin VendingMachine or player or location)
+                      " За батарейками Вам придется вернуться в лабиринт.";
+                 new_line; rtrue;
+             }
+         }
+       ],
+       before
+       [; Examine: print "Тускло поблескивающая лампа из латуни";
+                if (self hasnt on)
+                    ". Она не горит.";
+                ", испускающая ", (string) IIF (self.power_remaining < 30, "тусклый", "яркий"),
+                " свет.";
+
+          Burn: <<SwitchOn self>>;
+          Rub:  "Лампа электрическая, а Вы не Аладдин. Ничего интересного не произошло.";
+          SwitchOn: if (self.power_remaining <= 0)
+                "Похоже, что батарейкам настал конец.";
+          Receive:
+                if (noun == old_batteries)
+                    "От уже использованных батареек пользы будет немного!";
+                if (noun == fresh_batteries)
+                {   self.replace_batteries(); rtrue; }
+                "Кроме пары свежих батареек, вставлять в лампу что-либо другое нет смысла.";
+       ],
+
+       after
+       [; SwitchOn: give self light; StartDaemon(self);
+          SwitchOff: give self ~light;
+       ],
+  has  switchable female;
+
+Object -> bottle "маленьк/ая бутылк/а"
+  with name 'бутылк' 'бутыл' 'фляг' 'фляжк',
+       initial "Здесь лежит пустая бутылка.",
+       before
+       [; LetGo:
+             if (noun in bottle)
+                 "У Вас (в бутылке) это уже имеется.";
+         Receive:
+             if (noun == stream or Oil) <<Fill self>>;
+             else "В бутылке можно держать только жидкости.";
+         Fill:
+             if (child(bottle) ~= nothing)
+               "Бутылка уже чем-то заполнена.";
+             if (stream in location || Spring in location)
+             {   move water_in_the_bottle to bottle;
+                 "Вы наполнили бутылку водой.";
+             }
+             if (Oil in location)
+             {   move oil_in_the_bottle to bottle;
+                 "Вы наполнили бутылку маслом.";
+             }
+             "Ну, и чем же здесь можно наполнить бутылку?";
+         Empty: if (child(bottle) == nothing) "Бутылка уже пуста!";
+             print "Вы вылили ", (cAcc) (child(bottle)), " из бутылки.";
+             remove child(bottle);
+       ],
+  has  container open female;
+
+Object water_in_the_bottle "вод/а (в бутылке)"
+  with name 'вод' 'водичк' 'водиц' 'H2O',
+       before
+       [; Drink:  remove water_in_the_bottle; <<Drink Stream>>;
+       ],
+       description "Немного самой обычной холодной воды."
+       has female;
+
+Object oil_in_the_bottle "масл/о (в бутылке)"
+  with name 'масл' 'смазк',
+       before
+       [; Drink:  <<Drink Oil>>;
+       ],
+       description "Обыкновенное жидкое масло."
+       has neuter;
+
+AboveGround In_Forest_1 "В лесу"
+  with description "Вы на опушке леса, рядом с глубоким оврагом.",
+       e_to In_A_Valley,
+       d_to In_A_Valley,
+       n_to In_Forest_1,
+       w_to In_Forest_1,
+       s_to In_Forest_1,
+       initial [; if (random(2)==1) PlayerTo(In_Forest_2,1); ];
+
+AboveGround In_Forest_2 "В лесу"
+  with description "Вы на опушке леса. Овраг и дорога находятся где-то рядом.",
+       n_to At_End_Of_Road,
+       e_to In_A_Valley,
+       w_to In_A_Valley,
+       d_to In_A_Valley,
+       s_to In_Forest_1;
+
+AboveGround In_A_Valley "В глубоком овраге"
+  with description
+          "Вы находитесь в глубоком лесном овраге, поблизости от ручья,
+           быстро текущего куда-то вниз по каменистому руслу.",
+       n_to At_End_Of_Road,
+       e_to In_Forest_1,
+       w_to In_Forest_1,
+       u_to In_Forest_1,
+       s_to At_Slit_In_Streambed,
+       d_to At_Slit_In_Streambed;
+
+Object -> "русл/о ручья"
+  with name 'русл' 'лож' 'камн'
+  has  scenery neuter;
+
+AboveGround At_Slit_In_Streambed "У конца ручья"
+  with description
+	"У ваших ног вода стекает в двухдюймовую щель в скале.
+	 Ниже лежит лишь высохшее каменистое русло.",
+       n_to In_A_Valley,
+       e_to In_Forest_1,
+       w_to In_Forest_1,
+       s_to Outside_Grate,
+       d_to "Через щель в два дюйма вы не протиснетесь!",
+       in_to "Через щель в два дюйма вы не протиснетесь!";
+
+Object -> "щел/ь шириной в 2 дюйма"
+  with name 'щел' 'узк' 'двухдюймов',
+       description
+          "Просто щель двухдюймовой ширины, в которой ручей исчезает без следа.",
+       before
+       [;  Enter: "Через щель шириной в два дюйма Вы не протиснетесь!"; ],
+  has  scenery female;
+
+AboveGround Outside_Grate "Над стальной решеткой"
+  with description
+	"Вы находитесь в двадцатифутовой впадине, покрытой засохшей грязью.
+	 Под слоем грязи можно разглядеть стальную решетку, прочно закрепленную в каменистом дне.
+	 Из впадины вверх ведет русло высохшего ручья.",
+       e_to In_Forest_1,
+       w_to In_Forest_1,
+       s_to In_Forest_1,
+       n_to At_Slit_In_Streambed,
+       d_to 
+       [; if (Grate hasnt locked && Grate hasnt open)
+          { print "(Сперва открыв решетку...)^"; give Grate open; }
+          return Grate;
+       ];
+
+Object -> "двадцатифутов/ая впадин/а"
+  with	name 'двадцатифутов' 'впадин' 'углублен' 'ям',
+	description "Вы в ней находитесь.",
+  has  scenery female;
+
+Object -> Grate "стальн/ая решетк/а"
+  with name 'прочн' 'стальн' 'решетк',
+       description "Прочная стальная решетка, глубоко утопленная в каменистое дно.",
+       with_key set_of_keys,
+       door_dir
+       [; if (location==Below_The_Grate) return u_to; return d_to;
+       ],
+       door_to
+       [; if (location==Below_The_Grate) return Outside_Grate;
+          return Below_The_Grate;
+       ],
+       describe
+       [; if (self has open) "^Решетка открыта.";
+          if (self hasnt locked) "^Решетка закрыта, но не заперта.";
+          rtrue;
+       ],
+       found_in  Below_The_Grate  Outside_Grate
+  has  static door openable lockable locked female;
+
+! ----------------------------------------------------------------------------
+!   Facilis descensus Averno...
+!   (Легок спуск в Аверн)
+! ----------------------------------------------------------------------------
+
+Object Below_The_Grate "Камера под решеткой"
+  with description
+	"Вы находитесь в небольшой каморке под стальной решеткой, ведущей на поверхность.
+	 Узкий лаз, покрытый булыжниками, ведет куда-то в глубину к западу отсюда.",
+       w_to In_Cobble_Crawl,
+       u_to Grate
+  has  light;
+
+Object "булыжник/и"
+  with name 'булыжник' 'валун' 'камн' 'куч',
+       description "Куча ничем особо не примечательных булыжников.",
+       found_in  In_Cobble_Crawl  In_Debris_Room  Below_The_Grate
+  has  scenery multitude pluralname;
+
+Object In_Cobble_Crawl "Лаз с булыжниками"
+  with description
+	"Вы ползете по низкому, покрытому булыжниками проходу. 
+	 Откуда-то с восточной стороны пробивается тусклый свет.",
+       e_to Below_The_Grate,
+       w_to In_Debris_Room
+  has  light;
+
+Object -> wicker_cage "плетен/ая клетк/а"
+  with name 'маленьк' 'плетен' 'клетк',
+       description "Маленькая клетка, сплетенная из тонких древесных прутьев.",
+       initial "Небольшая плетеная клетка лежит неподалеку.",
+       after
+       [; Open: if (little_bird notin self) rfalse;
+                print "(выпуская птичку на свободу)^";
+                <<Release little_bird>>;
+       ],
+  has  container open openable transparent female;
+
+Object In_Debris_Room "Замусоренная пещера"
+  with description
+	"Вы в пещере, заполненной всякой грязью и мусором, занесенными водой с поверхности.
+	 Низкий широкий проход с булыжниками дальше забит грязью,
+	 но труднопроходимый каньон открывает путь вверх и на запад.^^
+	 Надпись на стене сообщает Вам, что ~Волшебное слово -- XYZZY.~",
+       e_to In_Cobble_Crawl,
+       u_to In_Awkward_Sloping_E_W_Canyon,
+       w_to In_Awkward_Sloping_E_W_Canyon,
+       before
+       [; Xyzzy: PlayerTo(Inside_Building); rtrue;
+       ],
+  has  nodwarf;
+
+Object -> "всяк/ий мусор/"
+  with	name 'мусор' 'гряз',
+	description "Брр.",
+  has  scenery male;
+
+Object -> "надпис/ь на стене"
+  with	name 'надпис' 'стен',
+	description "Она сообщает, что ~Волшебное слово -- XYZZY~.",
+  has  scenery female;
+
+Object -> black_rod "черн/ый жезл/ со ржавой звездой на конце"
+  with name 'черн' 'ржав' 'жезл' 'звезд',
+       initial "Трехфутовый черный жезл, один конец которого украшает 
+                ржавая железная звезда, лежит у Ваших ног.",
+       description "Черный жезл длиной в три фута, со звездой на конце.",
+       before
+       [; Wave:
+           if (location==West_Side_Of_Fissure or On_East_Bank_Of_Fissure)
+           {   if (caves_closed) "Странно -- ничего не произошло.";
+               if (CrystalBridge notin nothing)
+               {   remove CrystalBridge; give CrystalBridge absent;
+                   West_Side_Of_Fissure.e_to = 0;
+                   On_East_Bank_Of_Fissure.w_to = 0;
+                   "Хрустальный мост исчез без следа!";
+               }
+               else
+               {   move CrystalBridge to location; give CrystalBridge ~absent;
+                   West_Side_Of_Fissure.e_to = CrystalBridge;
+                   On_East_Bank_Of_Fissure.w_to = CrystalBridge;
+                   "Теперь ущелье пересекает хрустальный мост!";
+               }
+           }
+           "Ничего не произошло.";
+       ]
+  has male;
+
+Object In_Awkward_Sloping_E_W_Canyon "Неудобный восточно-западный каньон"
+  with description "Вы в труднопроходимом наклонном каньоне, ведущем с востока на запад.",
+       d_to In_Debris_Room,
+       e_to In_Debris_Room,
+       u_to In_Bird_Chamber,
+       w_to In_Bird_Chamber
+  has  nodwarf;
+
+! ----------------------------------------------------------------------------
+!   Маленькая веселая птичка в естественной среде обитания
+! ----------------------------------------------------------------------------
+
+Object In_Bird_Chamber "Птичья камера"
+  with description
+	"Вы находитесь в великолепной камере, стены которой похожи на замерзшие реки
+	 из оранжевого камня, а потолок достигает тридцати футов в высоту.
+	 На восток спускается узкий наклонный каньон, а на запад ведет удобный широкий проход.",
+       e_to In_Awkward_Sloping_E_W_Canyon,
+       w_to At_Top_Of_Small_Pit
+  has  nodwarf;
+
+Object -> little_bird "маленьк/ая птичк/а"
+  with name 'весел' 'грустн' 'маленьк' 'птичк',
+       initial "Здесь сидит маленькая птичка и весело поет.",
+       before
+       [; Examine:
+             if (self in wicker_cage) "В клетке птичка выглядит не такой веселой.";
+             "Маленькая веселая птичка сидит и поет.";
+
+          Insert: if (second==wicker_cage) <<Catch self>>;
+              else "Нет никакого смысла сажать птичку в ", (cAcc) second, "!";
+
+          Drop, Remove:
+              if (self in wicker_cage)
+              {   print "(Выпуская птичку из клетки.)^^";
+                  <<Release self>>;
+              }
+
+          Take, Catch:
+            if (self in wicker_cage)
+                "Птичка уже в Ваших руках.
+                 А если достать ее из клетки, она просто улетит.";
+            if (wicker_cage notin player)
+                "Поймать птичку не так уж трудно. А удержать?";
+            if (black_rod in player)
+                "Поначалу птичка не обращала на Вас внимания.
+                 Но когда вы подошли к ней, она встревожилась,
+                 и не дает себя поймать.";
+            move self to wicker_cage; give wicker_cage ~open;
+            "Вы поймали птичку и посадили ее в плетеную клетку.";
+
+          Release:
+            if (self notin wicker_cage) "Сейчас птичка находится не в клетке.";
+            give wicker_cage open;
+            move self to location;
+
+            if (Snake in location)
+            {   remove Snake;
+                "Маленькая птичка в отчаянном порыве набрасывается на змею,
+                 и успешно прогоняет ее прочь!";
+            }
+
+            if (Dragon in location)
+            {   remove self;
+                "Маленькая птичка в отчаянном порыве набрасывается на дракона,
+                 и успешно превращается в горсть пепла. Пепел развеивает ветер.";
+            }
+
+            "Маленькая птичка радостно выпорхнула на свободу.";
+       ],
+
+       life
+       [; Give: "Она не выглядит голодной.
+                 И, скорее всего, предпочтет ", cDat (noun), " птичий корм.";
+
+         Order, Ask, Answer: "Чирик! Чирик чик-чик!";
+
+         Attack:
+             if (self in wicker_cage) "Почему бы не оставить бедняжку в покое?";
+             remove self;
+             "Маленькая птичка мертва. Даже трупа от нее не осталось.";
+       ],
+  has  animate female;
+
+Object At_Top_Of_Small_Pit "Над колодцем"
+  with description
+	"Прямо из ваших ног находится колодец, буквально дышащий белым туманом.
+	 В этом месте проход на запад кончается, если не считать очень узкую трещину.^
+	 Грубые каменные ступени дают возможность спуститься вниз.",
+       e_to In_Bird_Chamber,
+       w_to "Трещина слишком узка, чтобы в нее протиснуться.",
+       d_to
+       [; if (large_gold_nugget in player)
+          {   deadflag=1;
+              "Вы достигли дна колодца быстрее, чем сами хотели,
+               и лежите там со сломанной шеей.";
+          }
+          return In_Hall_Of_Mists;
+       ],
+       before
+       [; Enter: if (noun==PitCrack) "В такую узкую трещину Вы не протиснитесь!";
+       ],
+  has  nodwarf;
+
+Object -> "туманн/ый колод/е/ц/"
+  with name 'колодец' 'колодц',
+
+       casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'е', 0);
+	],
+
+       description "Из колодца поднимаются бесформенные клубы белого тумана.",
+  has  scenery male;
+
+Object -> PitCrack "узк/ая трещин/а"
+  with name 'маленьк' 'узк' 'трещин' 'щел',
+       description "Трещина узковата -- во всяком случае, для Вас.",
+  has  scenery female;
+
+Object "бел/ый туман/"
+  with name 'бел' 'водян' 'туман' 'пар' 'дым',
+       description
+	"Туманом называется белый водяной пар, который часто можно встретить в пещерах.
+	 Обычно его присутствие является недвусмысленным признаком того,
+	 что где-то неподалеку имеется вода.",
+       found_in  At_Top_Of_Small_Pit In_Hall_Of_Mists
+                 On_East_Bank_Of_Fissure  At_Window_On_Pit_1
+                 At_West_End_Of_Hall_Of_Mists In_Misty_Cavern
+                 In_Mirror_Canyon  At_Reservoir At_Window_On_Pit_2
+                 On_Sw_Side_Of_Chasm
+  has  scenery male;
+
+! ----------------------------------------------------------------------------
+!   Начинаются пещеры: Зал Туманов
+! ----------------------------------------------------------------------------
+
+Object In_Hall_Of_Mists "В Зале Туманов"
+  with initial
+       [;  if (self has general) rfalse;
+           score=score+25; give self general;
+       ],
+       description
+	"Вы находитесь у входа в колоссальный зал,
+	 который простирается на запад далеко за пределы видимости.
+	 Путь открыт вправо и влево. Рядом с Вами широкая каменная лестница ведет куда-то вниз.
+	 Воздух заполнен клочьями белого тумана, плавающими туда-сюда, как живые,
+	 а с лестницы дует поток холодного воздуха. За вашей спиной грубые каменные ступени
+	 в куполообразном потолке ведут вверх.",
+       s_to In_Nugget_Of_Gold_Room,
+       w_to On_East_Bank_Of_Fissure,
+       d_to In_Hall_Of_Mt_King,
+       n_to In_Hall_Of_Mt_King,
+       u_to
+       [;  if (large_gold_nugget in player)
+       		"Вы не можете подняться по лестнице с таким грузом!";
+           return At_Top_Of_Small_Pit;
+       ];
+
+Object -> "широк/ая каменн/ая лестниц/а"
+  with name 'широк' 'каменн' 'лестниц',
+  description "Лестница ведет куда-то вниз.",
+  has  scenery female;
+
+Object -> "груб/ые каменн/ые ступен/и"
+  with name 'груб' 'каменн' 'ступен',
+  description "Грубые каменные ступени ведут по куполу вверх.",
+  has  scenery multitude pluralname;
+
+Object -> "высок/ий каменн/ый купол/"
+  with name 'высок' 'каменн' 'купол',
+       before
+       [; Examine: if (large_gold_nugget in player)
+                   "С тем грузом, что Вы с собой несете, Вам никак не добраться до верха.";
+                   "Похоже, что по нему можно забраться вверх.";
+         Climb: MovePlayer(u_obj); rtrue;
+       ],
+  has  scenery male;
+
+Object In_Nugget_Of_Gold_Room "Низкая комната"
+  with description
+	"Вы в комнате с очень низким потолком. На стене небрежно нацарапано:^^
+	 ~Вы не сможете подняться с ним вверх по лестнице!~",
+       n_to In_Hall_Of_Mists;
+
+Object -> "надпис/ь"
+  with name 'надпис',
+  description "Надпись сообщает: ~Вы не сможете подняться с ним вверх по лестнице!~",
+  has  scenery female;
+
+Treasure -> large_gold_nugget "огромн/ый золот/ой самород/о/к/"
+  with name 'золот' 'огромн' 'слиток' 'самородок' 'кусок',
+  description "Массивный кусок самородного золота!",
+  casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'о', 0);
+	],
+
+  initial "На полу поблескивает большой золотой самородок!",
+  has male;
+
+Class  FissureRoom
+  with before
+       [;
+          Jump: if (CrystalBridge hasnt absent)
+                 "Может быть, лучше воспользоваться мостом?";
+                 deadflag=1;
+                 "Отличный прыжок!
+                  До противоположного края Вы не долетели совсем немного...";
+       ],
+       d_to "Глянув вниз, Вы быстро отказались от этой мысли.";
+
+FissureRoom On_East_Bank_Of_Fissure "Восточный край пропасти"
+  with description
+       "Вы находитесь на восточной стороне глубокой пропасти,
+        рассекающей зал пополам. Здесь воздух очень влажен и насыщен туманом. 
+        Пропасть слишком широка, чтобы ее перепрыгнуть.",
+       e_to In_Hall_Of_Mists,
+       w_to "На Вашем пути -- широченная пропасть!";
+
+FissureRoom West_Side_Of_Fissure "Западный край пропасти"
+  with description "Вы находитесь на западной стороне пропасти в Зале Туманов.",
+       w_to At_West_End_Of_Hall_Of_Mists,
+       e_to "На Вашем пути -- широченная пропасть!",
+       n_to At_West_End_Of_Hall_Of_Mists,
+       before
+       [;   Go: if (location==West_Side_Of_Fissure && noun==n_obj)
+                print "Вы проползли узким широким проходом к северу от Зала Туманов
+                	и параллельно ему.^";
+       ];
+
+Treasure -> "бриллиант/ы"
+  with name 'многокаратов' 'бриллиант' 'алмаз' 'драгоценност',
+       description "Многокаратовые бриллианты чистейшей воды!",
+       initial "Прямо на полу сверкает россыпь бриллиантов!",
+  has  multitude pluralname;
+
+Object CrystalBridge "хрустальн/ый мост/"
+  with name 'волшебн' 'хрустальн' 'мост',
+       initial "Оба края пропасти теперь соединяет хрустальный мост.",
+       description "Он позволяет легко пересечь пропасть.",
+       door_dir
+       [;  if (location==West_Side_Of_Fissure) return e_to; return w_to;
+       ],
+       door_to
+       [;  if (location==West_Side_Of_Fissure) return On_East_Bank_Of_Fissure;
+           return West_Side_Of_Fissure;
+       ],
+       found_in  On_East_Bank_Of_Fissure  West_Side_Of_Fissure
+  has  static door open absent male;
+
+Object "глубок/ая пропаст/ь"
+  with name 'широк' 'глубок' 'пропаст',
+       description "Даже не мечтайте о том, чтобы ее перепрыгнуть!",
+       found_in  On_East_Bank_Of_Fissure  West_Side_Of_Fissure
+  has  scenery female;
+
+Object At_West_End_Of_Hall_Of_Mists "Западный конец Зала Туманов"
+  with description
+	"Вы находитесь в западном конце Зала Туманов. 
+	 Один широкий узкий проход ведет отсюда на запад, другой на север.
+	 К югу имеется небольшой проход в шести футах от пола.",
+       s_to Alike_Maze_1,
+       u_to Alike_Maze_1,
+       e_to West_Side_Of_Fissure,
+       w_to At_East_End_Of_Long_Hall,
+       n_to West_Side_Of_Fissure,
+       before
+       [; Go: if (noun==n_obj)
+                print "Вы проползли узким широким проходом к северу от Зала Туманов
+                       и параллельно ему.^";
+       ];
+
+! ----------------------------------------------------------------------------
+!   Длинный Зал (к востоку от Зала Туманов)
+! ----------------------------------------------------------------------------
+
+Object At_East_End_Of_Long_Hall "Восточный конец Длинного Зала"
+  with description
+	"Вы находитесь в восточном конце длинного зала без боковых ответвлений.
+	 К востоку низкий широкий проход ведет вверх.
+	 К северу круглый трехфутовый туннель ведет вниз.",
+       e_to At_West_End_Of_Hall_Of_Mists,
+       u_to At_West_End_Of_Hall_Of_Mists,
+       w_to At_West_End_Of_Long_Hall,
+       n_to Crossover,
+       d_to Crossover;
+
+Object At_West_End_Of_Long_Hall "Западный конец Длинного Зала"
+  with description
+	"Вы находитесь в западном конце длинного, но ничем не примечательного зала.
+	 Здесь он смыкается с узким проходом, ведущим с севера на юг.",
+       e_to At_East_End_Of_Long_Hall,
+       s_to Different_Maze_1,
+       n_to Crossover;
+
+Object Crossover "Перекресток коридоров"
+  with description
+	"Вы на перекрестке двух коридоров:
+	 высокого (северно-южного) и низкого (западно-восточного).",
+       w_to At_East_End_Of_Long_Hall,
+       n_to Dead_End_7,
+       e_to In_West_Side_Chamber,
+       s_to At_West_End_Of_Long_Hall;
+
+Object -> "перекрест/о/к/"
+  with name 'перекресток' 'перекрестк',
+  description "Мне о нем известно ровно столько же, сколько и Вам.",
+  casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'о', 0);
+	],
+  has  scenery male;
+
+! ----------------------------------------------------------------------------
+!   В лабиринте множество тупиков. Определим для них общий класс:
+! ----------------------------------------------------------------------------
+
+Class  DeadEndRoom
+  with short_name "Тупик",
+       description "Вы в глухом тупике -- дальше путь отсутствует.",
+       cant_go "Вернуться можно лишь тем путем, каким Вы сюда пришли.";
+
+DeadEndRoom Dead_End_7
+  with s_to Crossover, out_to Crossover;
+
+! ----------------------------------------------------------------------------
+!   Зал Горного Короля (и прилегающие боковые пещеры)
+! ----------------------------------------------------------------------------
+
+Object In_Hall_Of_Mt_King "Зал Горного Короля"
+  with description
+	"Вы находитесь в Зале Горного Короля.
+	 Пути отсюда ведут во всех направлениях.",
+       cant_go "Ну, может быть, и не совсем во всех...",
+       u_to In_Hall_Of_Mists,
+       e_to In_Hall_Of_Mists,
+       n_to Low_N_S_Passage,
+       s_to In_South_Side_Chamber,
+       w_to In_West_Side_Chamber,
+       sw_to In_Secret_E_W_Canyon,
+       before
+       [; Go: if (Snake in self && (noun == n_obj or s_obj or w_obj
+                  || (noun == sw_obj && random(100) <= 35)))
+                  "Вы не можете прокрасться мимо змеи!";
+       ];
+
+Object -> Snake "зме/я"
+  with name 'зме' 'змеюк' 'твар' 'гадин',
+  description "На Вашем месте я бы держался от нее подальше!",
+  initial "Огромная свирепая зеленая змея преграждает Вам путь!",
+  life
+       [;
+         Order, Ask, Answer: "С-с-сс-СССС!";
+         ThrowAt: if (noun==axe) <<Attack self>>;
+                  <<Give noun self>>;
+         Give: if (noun==little_bird)
+               {   remove little_bird;
+                   "Сожрав птичку, змея облизнулась и посмотрела на Вас
+		    с явной надеждой на продолжение банкета.";
+               }
+               "У Вас нет ничего, что она хотела бы сожрать. Разве только Вы сами?";
+         Attack: "От этого пользы не будет никакой, а вот риск...";
+         Take:  deadflag=1;
+		"Но получилось наоборот.^Аа-ап! Хруп-хруп!";
+       ],
+  has  animate female;
+
+Object Low_N_S_Passage "Низкий северо-южный проход"
+  with description
+	"Вы в низком проходе, ведущем с севера на юг.
+	 Отверстие в полу у Ваших ног ведет вниз, в проход с запада на восток.",
+       s_to In_Hall_Of_Mt_King,
+       d_to In_Dirty_Passage,
+       n_to At_Y2;
+
+Treasure -> "слитк/и серебра"
+  with name 'серебр' 'слиток' 'слитк',
+  description "Похоже, что они стоят целое состояние!",
+  initial "На полу лежит груда серебряных слитков!",
+  has pluralname;
+
+Object In_South_Side_Chamber "Южная боковая камера"
+  with description "Вы в комнате к югу от большого зала.",
+       n_to In_Hall_Of_Mt_King;
+
+Treasure -> "драгоценн/ые камн/и"
+  with name 'драгоценност' 'драгоценн' 'ценност' 'камн',
+  description "Похоже, что все они очень ценные!",
+  initial "На полу россыпь драгоценностей!",
+  has pluralname;
+
+Object In_West_Side_Chamber "Западная боковая камера"
+  with description
+	"Вы в комнате к западу от большого зала.
+	 Пути отсюда ведут на запад и вверх.",
+       w_to Crossover,
+       u_to Crossover,
+       e_to In_Hall_Of_Mt_King;
+
+Treasure -> rare_coins "редк/ие монет/ы"
+  with name 'редк' 'ценн' 'монет',
+  description "Любая из них -- настоящая мечта нумизмата!",
+  initial "На полу рассыпано множество монет!",
+  has  multitude pluralname;
+
+! ----------------------------------------------------------------------------
+!   Комната "Y2" и ее окрестности
+! ----------------------------------------------------------------------------
+
+Object At_Y2 "В комнате ~Y2~"
+  with description
+	"Вы в большой комнате. Один проход ведет на юг, другой на запад,
+	 и целая стена из камней преграждает путь на восток.
+	 Символы ~Y2~ начертаны на скале в середине комнаты.",
+       after
+       [; Look: if (random(100)<=25) print "^Голос ниоткуда произнес: ~Plugh.~^"; ],
+       before
+       [; Plugh: PlayerTo(Inside_Building); rtrue;
+          Plover: if (In_Plover_Room hasnt visited) rfalse;
+                  if (egg_sized_emerald in player)
+                  {   move egg_sized_emerald to In_Plover_Room;
+                      score = score - 5;
+                  }
+                  PlayerTo(In_Plover_Room); rtrue;
+       ],
+       s_to Low_N_S_Passage,
+       e_to Jumble_Of_Rock,
+       w_to At_Window_On_Pit_1;
+
+Object -> "скал/а со знаком ~Y2~"
+  with name 'скал' 'знак' 'y2',
+  description "На скале начертано: ~Y2~. Что бы это значило???",
+  has  scenery supporter female;
+
+Object Jumble_Of_Rock "мешанин/а каменных обломков"
+  with description
+  	"Вокруг валяется куча обломков скального камня, покрытых трещинами.",
+       d_to At_Y2,
+       u_to In_Hall_Of_Mists,
+  has scenery female;
+
+Object At_Window_On_Pit_1 "У окна над пропастью"
+  with description
+	"Вы у низкого окна над глубокой пропастью, уходящей за пределы видимости.
+	 Лишь с большим трудом можно разглядеть дно примерно 50 футами ниже.
+	 Клочья белого тумана скрывают его, сгущаясь справа от Вас.
+	 Пыль вокруг окна покрыта отметками, указывающими на то,
+	 что кто-то был здесь совсем недавно.
+	 По другую сторону провала, в 20 футах отсюда, 
+	 можно видеть очень похожее окно, освещенное изнутри.
+	 За окном находится туманная фигура человека, который, похоже,
+	 уставился на Вас.",
+       before
+       [; WaveHands: "Туманная фигура помахала Вам в ответ!"; ],
+       cant_go "Единственный путь отсюда -- назад к ~Y2~.",
+       e_to At_Y2;
+
+Class PitScenery
+  with found_in  At_Window_On_Pit_1 At_Window_On_Pit_2,
+  has  scenery;
+
+PitScenery "окн/о"
+  with name 'низк' 'окн',
+  description "Самое обыкновенное окно.",
+  has  openable neuter;
+
+PitScenery "глубок/ий и высок/ий провал/"
+  with name 'глубок' 'высок' 'провал',
+  description
+	"Он настолько высокий и глубокий, что дно с трудом можно разглядеть
+	 где-то пятьюдесятью футами ниже, а потолок невозможно разглядеть вообще.",
+       has male;
+
+PitScenery "отметк/и в пыли"
+  with name 'отметк' 'пыл',
+  description "Похоже, что Вы не единственный, кто здесь побывал!",
+  has  multitude pluralname;
+
+PitScenery "туманн/ая фигур/а"
+  with name 'туманн' 'таинственн' 'фигур' 'человек',
+       description "Кажется, туманная фигура пытается привлечь Ваше внимание!",
+  has female;
+
+Object In_Dirty_Passage "В грязном неровном проходе"
+  with description
+	"Вы в грязном неровном проходе. На восток ведет узкий лаз.
+	 На запад имеется более широкий проход.
+	 Отверстие над Вами ведет еще куда-то.",
+       e_to On_Brink_Of_Pit,
+       u_to Low_N_S_Passage,
+       w_to In_Dusty_Rock_Room;
+
+Object On_Brink_Of_Pit "На краю колодца"
+  with description
+	"Вы на краю небольшого чистого колодца, в который можно попробовать спуститься.
+	 Узкий лаз ведет отсюда на запад.",
+       w_to In_Dirty_Passage,
+       d_to In_Pit,
+       in_to In_Pit;
+
+Object -> "небольш/ой колод/е/ц/"
+  with name 'небольш' 'маленьк' 'колодец' 'колодц',
+       description "При определенной ловкости в него можно спуститься.",
+       casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'е', 0);
+	],
+       before
+       [; Climb, Enter: MovePlayer(d_obj); rtrue; ],
+  has  scenery male;
+
+Object In_Pit "Внутри колодца"
+  with description
+	"Вы на самом дне узкого колодца.
+	 Здесь журчит небольшой ручей, втекающий и вытекающий через узкие щели в стенах.",
+       u_to On_Brink_Of_Pit,
+       d_to "Через щели Вы не сможете пролезть!"
+  has  nodwarf;
+
+Object -> "узк/ие щел/и"
+  with name 'узк' 'запутанн' 'щел',
+  description "Щелей много, и они образуют сложный, запутанный узор в скале.",
+  has  scenery multitude pluralname;
+
+Object In_Dusty_Rock_Room "Среди мелких камней"
+  with description
+	"Вы в большой комнате, полной мелких камней. В полу есть широкое отверстие.
+	 В стенах полно трещин, и узкий проход ведет на восток.",
+       e_to In_Dirty_Passage,
+       d_to At_Complex_Junction;
+
+Object -> "мелк/ие камн/и"
+  with name 'мелк' 'грязн' 'камн' 'камен',
+  description "Обыкновенные камни, только очень мелкие и грязные.",
+  has  scenery multitude pluralname;
+
+! ----------------------------------------------------------------------------
+!   Лабиринт из запутанных узких проходов (все одинаковые)...
+! ----------------------------------------------------------------------------
+
+Class  MazeRoom
+  with short_name "В лабиринте",
+       description "Вы в лабиринте запутанных узких проходов (все одинаковые).",
+       out_to "Легко сказать, труднее сделать.";
+
+MazeRoom Alike_Maze_1
+  with 
+       u_to At_West_End_Of_Hall_Of_Mists,
+       n_to Alike_Maze_1,
+       e_to Alike_Maze_2,
+       s_to Alike_Maze_4,
+       w_to Alike_Maze_11;
+
+MazeRoom Alike_Maze_2
+  with 
+       w_to Alike_Maze_1,
+       s_to Alike_Maze_3,
+       e_to Alike_Maze_4;
+
+MazeRoom Alike_Maze_3
+  with 
+       e_to Alike_Maze_2,
+       d_to Dead_End_3,
+       s_to Alike_Maze_6,
+       n_to Dead_End_13;
+
+MazeRoom Alike_Maze_4
+  with 
+       w_to Alike_Maze_1,
+       n_to Alike_Maze_2,
+       e_to Dead_End_1,
+       s_to Dead_End_2,
+       u_to Alike_Maze_14,
+       d_to Alike_Maze_14;
+
+MazeRoom Alike_Maze_5
+  with 
+       e_to Alike_Maze_6,
+       w_to Alike_Maze_7;
+
+MazeRoom Alike_Maze_6
+  with 
+       e_to Alike_Maze_3,
+       w_to Alike_Maze_5,
+       d_to Alike_Maze_7,
+       s_to Alike_Maze_8;
+
+DeadEndRoom Dead_End_1
+  with 
+       w_to Alike_Maze_4,
+       out_to Alike_Maze_4;
+
+DeadEndRoom Dead_End_2
+  with 
+       w_to Alike_Maze_4,
+       out_to Alike_Maze_4;
+
+DeadEndRoom Dead_End_3
+  with 
+       u_to Alike_Maze_3,
+       out_to Alike_Maze_3;
+
+MazeRoom Alike_Maze_7
+  with 
+       w_to Alike_Maze_5,
+       u_to Alike_Maze_6,
+       e_to Alike_Maze_8,
+       s_to Alike_Maze_9;
+
+MazeRoom Alike_Maze_8
+  with 
+       w_to Alike_Maze_6,
+       e_to Alike_Maze_7,
+       s_to Alike_Maze_8,
+       u_to Alike_Maze_9,
+       n_to Alike_Maze_10,
+       d_to Dead_End_12;
+
+MazeRoom Alike_Maze_9
+  with 
+       w_to Alike_Maze_7,
+       n_to Alike_Maze_8,
+       s_to Dead_End_4;
+
+DeadEndRoom Dead_End_4
+  with 
+       w_to Alike_Maze_9,
+       out_to Alike_Maze_9;
+
+MazeRoom Alike_Maze_10
+  with 
+       w_to Alike_Maze_8,
+       n_to Alike_Maze_10,
+       d_to Dead_End_5,
+       e_to At_Brink_Of_Pit;
+
+DeadEndRoom Dead_End_5
+  with 
+       u_to Alike_Maze_10,
+       out_to Alike_Maze_10;
+
+Object At_Brink_Of_Pit "На краю колодца"
+  with description
+	"Вы на краю тридцатифутового колодца. 
+	 Вниз по стене спускается массивная оранжевая каменная колонна.
+	 По ней нетрудно спуститься вниз, но забраться назад Вы уже не сможете.
+	 Проходы лабиринта ведут отсюда во все стороны.",
+       d_to In_Bird_Chamber,
+       w_to Alike_Maze_10,
+       s_to Dead_End_6,
+       n_to Alike_Maze_12,
+       e_to Alike_Maze_13;
+
+Object -> "массивн/ая оранжев/ая колонн/а"
+  with name 'массивн' 'оранжев' 'колонн',
+       description "Крепко цепляясь за нее руками и ногами, можно спуститься вниз.",
+       before [; Climb: MovePlayer(d_obj); rtrue; ],
+  has  scenery female;
+
+Object -> "тридцатифутов/ый/ колод/е/ц/"
+  with name 'тридцатифутов' 'глубок' 'колодец' 'колодц',
+       description "Спуститесь в него и посмотрите сами!",
+       casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'е', 0);
+	],
+       before [; Climb: MovePlayer(d_obj); rtrue; ],
+  has  scenery male;
+
+DeadEndRoom Dead_End_6
+  with e_to At_Brink_Of_Pit,
+       out_to At_Brink_Of_Pit;
+
+! ----------------------------------------------------------------------------
+!   Три важных комнаты по пути с востока на запад
+! ----------------------------------------------------------------------------
+
+Object At_Complex_Junction "Сложный перекресток"
+  with description
+	"Вы находитесь у сложного перекрестка.
+	 Низкий, ведущий на север лаз, проходимый лишь на четвереньках,
+	 пересекается здесь с более высоким коридором, ведущим с запада на восток.
+	 Прямо над вами есть еще одна большая комната.
+	 Воздух здесь насыщен влагой.",
+       u_to In_Dusty_Rock_Room,
+       w_to In_Bedquilt,
+       n_to In_Shell_Room,
+       e_to In_Anteroom;
+
+Object In_Bedquilt "~Лоскутное одеяло~"
+  with description
+	"Вы в ~лоскутном одеяле~ -- длинном проходе, ведущем с запада на восток
+	 и сплошь пронизанном запутанными сквозными проходами.
+	 Можете выбирать наугад -- идти на север, на юг, вверх или вниз.",
+       e_to At_Complex_Junction,
+       w_to In_Swiss_Cheese_Room,
+       s_to In_Slab_Room,
+       u_to In_Dusty_Rock_Room,
+       n_to At_Junction_Of_Three,
+       d_to In_Anteroom,
+       before
+       [ destiny;
+         Go: if (noun==s_obj or d_obj && random(100)<=80) destiny=1;
+             if (noun==u_obj && random(100)<=80) destiny=1;
+             if (noun==u_obj && random(100)<=50)
+                 destiny=In_Secret_N_S_Canyon_1;
+             if (noun==n_obj && random(100)<=60) destiny=1;
+             if (noun==n_obj && random(100)<=75)
+                 destiny=In_Large_Low_Room;
+             if (destiny==1)
+                 "Поползав немного туда-сюда в узких боковых проходах,
+                  Вы неожиданно вернулись в центральный коридор.";
+             if (destiny==0) rfalse;
+             PlayerTo(destiny); rtrue;
+       ];
+
+Object In_Swiss_Cheese_Room "~Швейцарский сыр~"
+  with description
+	"Вы в комнате, стены которой сильно напоминают швейцарский сыр.
+	 Очевидные выходы ведут на запад, восток, С-З и С-В.
+	 Значительную часть комнаты занимает огромная каменная плита.",
+       w_to At_East_End_Of_Twopit_Room,
+       s_to In_Tall_E_W_Canyon,
+       ne_to In_Bedquilt,
+       nw_to In_Oriental_Room,
+       e_to In_Soft_Room,
+       before
+       [; Go: if ((noun==s_obj  && random(100) <= 80)
+               || (noun==nw_obj && random(100) <= 50))
+              "Поползав немного туда-сюда по узким боковым проходам,
+               Вы неожиданно вернулись в центральный коридор.";
+       ];
+
+Object -> "больш/ая каменн/ая плит/а"
+  with name 'больш' 'каменн' 'блок' 'плита',
+       description "Это не более, чем массивный кусок камня.",
+       before [; LookUnder, Push, Pull, Take: "Шутите?"; ],
+  has  scenery female;
+
+! ----------------------------------------------------------------------------
+!   Двойной колодец и его окрестности
+! ----------------------------------------------------------------------------
+
+! Возможная высота растения:
+Constant TINY_P = 0;
+Constant TALL_P = 1;
+Constant HUGE_P = 2;
+
+Object At_West_End_Of_Twopit_Room "У двух колодцев (западный конец)"
+  with description
+	"Вы в западном конце комнаты с двумя колодцами.
+	 Прямо над колодцем в стене есть большое отверстие.",
+       e_to At_East_End_Of_Twopit_Room,
+       w_to In_Slab_Room,
+       d_to In_West_Pit,
+       u_to "Отверстие слишком высоко, чтобы можно было добраться дотуда.",
+       before
+       [; Enter: if (noun==HoleAbovePit_1)
+            "Отверстие слишком высоко, чтобы можно было залезть туда.";
+       ];
+
+Object PlantStickingUp "чудо-растен/ие"
+  with name 'чуд' 'растен' 'стебел' 'стебл' 'боб' 'ствол',
+       found_in  At_West_End_Of_Twopit_Room  At_East_End_Of_Twopit_Room,
+       describe
+       [;  if (Plant.height == TALL_P)
+               "В западном колодце еле видна самая верхушка 12-футового растения.";
+               "Гигантское растение далеко высовывается из западного колодца.";
+       ],
+       before
+       [; Examine: RunRoutines(self,describe); rtrue;
+          Climb: if (Plant.height==HUGE_P) <<Climb Plant>>;
+       ],
+  has  absent static neuter;
+
+Object HoleAbovePit_1 "отверст/ие над колодцем"
+  with name 'отверст' 'дыр',
+  description "Над колодцем в стене есть большое отверстие.",
+  found_in In_West_Pit At_West_End_Of_Twopit_Room
+  has  scenery neuter;
+
+Object In_West_Pit "В западном колодце"
+  with description
+	"Вы находитесь на дне западного колодца.
+	 В двадцати пяти футах над Вами в стене есть большая дыра.",
+       before
+       [; Climb:
+           if (noun==Plant) rfalse;
+           if (Plant.height == TINY_P)
+               "Но растение совсем крошечное!
+		(Путь ~вверх~ или ~наружу~ ведет из колодца.)";
+       ],
+       u_to At_West_End_Of_Twopit_Room
+  has  nodwarf;
+
+Object -> Plant "чудо-растен/ие"
+  with height TINY_P,
+       name 'чуд' 'растен' 'стебел' 'стебл' 'боб' 'ствол',
+       describe
+       [; switch(self.height)
+          {   TINY_P:
+		"В колодце из пола растет маленькое растение. 
+		 Оно тихонько шепчет: ~Воды мне, воды...~";
+              TALL_P:
+		"Двенадцатифутовый стебель растения почти достает до верхнего края колодца.
+		 Растение громко завывает: ~ВОДЫ!! ХОЧУ ВОДЫ!!~";
+              HUGE_P:
+		"Огромное растение устремляется ввысь, далеко высовываясь за край колодца.";
+          }
+       ],
+       before
+       [;
+         Climb: switch(self.height)
+                {   TINY_P: "Оно же совсем крохотное!";
+                    TALL_P:
+                        print "Забравшись вверх по стволу, Вы без труда выбрались из колодца.^";
+                        PlayerTo(At_West_End_Of_Twopit_Room); rtrue;
+                    HUGE_P:
+                        print "Забравшись вверх по стволу,
+                               Вы смогли добраться до отверстия над колодцем!^";
+                        PlayerTo(In_Narrow_Corridor); rtrue;
+                }
+
+         Take:  "У растения оказались удивительно прочные корни!";
+
+         Water: if (bottle notin player)
+                    "Полить его? А каким образом?";
+
+                switch (child(bottle))
+                {   nothing: "Но Ваша бутылка пуста!";
+                    oil_in_the_bottle:
+                    remove oil_in_the_bottle;
+                    "Растение возмущенно стряхнуло капельки масла с листьев,
+		     и проворчало ~А вода где?!~";
+                }
+                remove water_in_the_bottle;
+
+                switch (self.height ++) {
+                    TINY_P:
+                        print "Растение начало расти, и за считанные секунды достигло потолка!^^";
+                        give PlantStickingUp ~absent;
+                    TALL_P:
+                        print "Верхушка растения поднимается с ошеломляющей скоростью!
+			       Его ствол почти заполнил собой весь колодец!^^";
+                    HUGE_P:
+                        print "Вы переусердствовали с поливкой!
+			       Растение съеживается у Вас на глазах! Оно... Оно...^^";
+                        give PlantStickingUp absent; remove PlantStickingUp;
+                        self.height = TINY_P;
+                }
+                <<Examine self>>;
+
+         Oil:   <<Water self>>;
+
+         Examine: self.describe(); rtrue;
+       ],
+       has neuter;
+
+Object At_East_End_Of_Twopit_Room "У двух колодцев (восточный конец)"
+  with description
+	"Вы находитесь в восточном конце комнаты с двумя колодцами.
+	 Пол здесь состоит из нескольких слоев каменных плит,
+	 что сильно упрощает спуск в колодец. Мимо колодцев ведет тропа,
+	 соединяющая проходы на запад и на восток. В стенах есть множество
+	 отверстий, но самое крупное (и труднодоступное) находится в стене
+	 над западным колодцем.",
+       e_to In_Swiss_Cheese_Room,
+       w_to At_West_End_Of_Twopit_Room,
+       d_to In_East_Pit;
+
+Object -> "узк/ие каменн/ые плит/ы"
+  with name 'узк' 'каменн' 'плит' 'ступен' 'лестниц',
+       description "Они образуют подобие естественной лестницы,
+		    дающей возможность спуститься в колодец.",
+       before
+       [; LookUnder, Push, Pull, Take: "Шутите?"; ],
+  has  scenery multitude pluralname;
+
+Object In_East_Pit "В восточном колодце"
+  with description "Вы находитесь на дне восточного колодца.
+		    В одном из его углов на полу есть небольшая лужица масла.",
+       u_to At_East_End_Of_Twopit_Room
+  has  nodwarf;
+
+Object -> Oil "луж/а масла"
+  with name 'луж' 'лужиц' 'масл',
+       description "Выглядит, как обыкновенное жидкое масло.",
+       before
+       [; Drink:  "Как-то не хочется это пить.";
+          Take:   if (bottle notin player) "Вам не во что налить масло!";
+                  <<Fill bottle>>;
+          Insert: if (second == bottle) <<Fill bottle>>;
+                  "Вы не можете наполнить это маслом.";
+       ],
+  has  scenery female;
+
+Object "отверст/ие над колодцем"
+  with name 'дыр' 'отверст',
+       description "Отверстие в стене прямо у Вас над головой.",
+       found_in In_East_Pit At_East_End_Of_Twopit_Room
+  has  scenery neuter;
+
+Object In_Slab_Room "Камера с каменной плитой"
+  with description
+	"Вы в круглой и низкой камере, пол которой является большой каменной плитой,
+	 рухнувшей с потолка. К востоку и западу отсюда когда-то были проходы,
+	 которые сейчас полностью завалены камнями.
+	 Маленькие низкие проходы ведут на север и на юг
+	 (но южный делает крутой поворот на запад сразу за грудой камней).",
+       s_to At_West_End_Of_Twopit_Room,
+       u_to In_Secret_N_S_Canyon_0,
+       n_to In_Bedquilt;
+
+Object -> "каменн/ая плит/а"
+  with name 'больш' 'каменн' 'плит',
+  description "Когда-то была потолком, а теперь стала полом.",
+  before [; LookUnder, Push, Pull, Take: "Продолжаете шутить?"; ],
+  has  scenery female;
+
+Object -> "груд/а камней"
+  with name 'груд' 'булыжник' 'камн',
+  description "Целая груда бесформенных кусков битого камня.",
+  has  scenery multitude female;
+
+! ----------------------------------------------------------------------------
+!   Сеть из преимущественно секретных каньонов
+! ----------------------------------------------------------------------------
+
+Object In_Secret_N_S_Canyon_0 "Секретный С-Ю каньон"
+  with description "Вы в секретном каньоне, ведущем с севера на юг над огромной комнатой.",
+       d_to In_Slab_Room,
+       s_to In_Secret_Canyon,
+       n_to In_Mirror_Canyon,
+       before
+       [; Go: if (noun==s_obj) canyon_from=self; ];
+
+Object In_Secret_N_S_Canyon_1 "Секретный С-Ю каньон"
+  with description "Вы в секретном каньоне, ведущем с севера на юг над широким проходом.",
+       n_to At_Junction_Of_Three,
+       d_to In_Bedquilt,
+       s_to Atop_Stalactite;
+
+Object At_Junction_Of_Three "Перекресток трех каньонов"
+  with description
+	"Вы находитесь у перекрестка трех секретных каньонов, ведущих на север, юг и Ю-В.
+	 Северный проход высотой в оба других вместе взятых.",
+       se_to In_Bedquilt,
+       s_to In_Secret_N_S_Canyon_1,
+       n_to At_Window_On_Pit_2;
+
+Object In_Large_Low_Room "Большая низкая комната"
+  with description
+       "Вы в большой комнате с низким потолком. Проходы отсюда ведут на север, Ю-В и Ю-З.",
+       sw_to In_Sloping_Corridor,
+       se_to In_Oriental_Room,
+       n_to Dead_End_Crawl;
+
+Object Dead_End_Crawl "Тупиковый лаз"
+  with description "Этот лаз привел Вас в тупик.",
+       s_to In_Large_Low_Room,
+       out_to In_Large_Low_Room;
+
+Object In_Secret_E_W_Canyon "Тайный В-З проход над узким каньоном"
+  with description
+	"Вы находитесь в тайном каньоне, ведущем с востока на запад. 
+	 В этом месте он пересекает очень узкий проход, лежащий 15 футами ниже.
+	 Но если Вы туда спуститесь, вернуться назад не получится.",
+       e_to In_Hall_Of_Mt_King,
+       w_to In_Secret_Canyon,
+       before
+       [; Go: if (noun==w_obj) canyon_from=self; ],
+       d_to In_N_S_Canyon;
+
+Object In_N_S_Canyon "С-Ю Каньон"
+  with description "Вы находитесь в одном из самых широких мест С-Ю каньона.",
+       s_to Canyon_Dead_End,
+       n_to In_Tall_E_W_Canyon;
+
+Object Canyon_Dead_End "Тупик"
+  with description "Здесь каньон становится таким узким, что дальше на юг не пройти.",
+       n_to In_N_S_Canyon;
+
+Object In_Tall_E_W_Canyon "Высокий В-З каньон"
+  with description
+	"Вы находитесь в высоком В-З каньоне.
+	 На север открывается низкий узкий лаз трехфутовой длины.",
+       e_to In_N_S_Canyon,
+       w_to Dead_End_8,
+       n_to In_Swiss_Cheese_Room;
+
+Object Atop_Stalactite "Над сталактитом"
+  with description
+	"Огромный сталактит, спускающийся с потолка, почти достигает пола внизу.
+	 Вы можете спуститься по нему вниз, и спрыгнуть на пол,
+	 но забраться назад после этого будет невозможно.",
+       n_to In_Secret_N_S_Canyon_1,
+       d_to
+       [; if (random(100) <= 40) return Alike_Maze_6;
+          if (random(100) <= 50) return Alike_Maze_9;
+          return Alike_Maze_4;
+       ],
+       before
+       [; Jump, Climb: <<Go d_obj>>; ];
+
+Object -> "огромн/ый сталактит/"
+  with name 'огромн' 'сталактит',
+       description
+	"Спуститься по нему вниз можно (если осторожно).
+	 Но вот о том, чтобы забраться наверх, и не мечтайте!",
+       before
+       [; LookUnder, Push, Take: "Осторожнее!"; ],
+  has  scenery male;
+
+! ----------------------------------------------------------------------------
+!   Здесь водятся драконы!
+! ----------------------------------------------------------------------------
+
+Object In_Secret_Canyon "Секретный каньон"
+  with description "Вы в секретном каньоне, с выходами на север и восток.",
+       e_to 
+       [; if (canyon_from == In_Secret_E_W_Canyon) return canyon_from;
+          if (Dragon in location)
+              "Одного беглого взгляда вполне достаточно, чтобы понять,
+	       что связываться с ним не стоит!";
+          return In_Secret_E_W_Canyon;
+       ],
+       n_to
+       [; if (canyon_from == In_Secret_N_S_Canyon_0) return canyon_from;
+          if (Dragon in location)
+              "У Вас на пути -- ДРАКОН. Не лучше ли поискать другой путь?";
+          return In_Secret_N_S_Canyon_0;
+       ],
+       out_to
+       [; return canyon_from; ],
+       before
+       [; if (Dragon has general) {
+              give Dragon ~general;
+	      if (action==##Yes) {
+		remove Dragon; move DragonCorpse to location;
+		"ПОЗДРАВЛЯЕМ! Вы одолели дракона голыми руками!
+		 (Бред собачий, не правда ли?)";
+		}
+	      if (action==##No) "Очень благоразумное решение!";
+	      }
+       ];
+
+Object -> Dragon "свиреп/ый дракон/"
+  with name 'свиреп' 'дракон' 'монстр' 'ящер' 'твар' 'рептил',
+       description "На Вашем месте я бы с ним не связывался!",
+       initial "Гигантский свирепый зеленый дракон преграждает Вам путь!",
+       life
+       [; Attack:  give Dragon general; "Интересно, и чем же? Голыми руками?";
+          Give:    "Как-то непохоже, что его можно подкупить или задобрить.";
+          ThrowAt: if (noun~=axe)
+			"Да уж лучше попробовать голыми руками, нежели ", (cIns) noun, "!";
+                   move axe to location;
+                   "Топор отскочил от непробиваемой чешуи дракона,
+                    не причинив тому ни малейшего вреда.";
+       ],
+  has  animate male;
+
+Treasure -> "персидск/ий ков/е/р/"
+  with name 'персидск' 'ковер' 'ковр',
+       depositpoints 14,
+       before
+       [; Take: if (Dragon in location)
+                "То, что на ковре развалился здоровенный (и весьма свирепый) дракон,
+                 немного мешает реализации этой привлекательной идеи.";
+       ],
+       describe
+       [; if (Dragon in location)
+             "Дракон лежит на роскошном персидском ковре!";
+          "Пол пещеры покрыт роскошным персидским ковром.";
+       ],
+       casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'е', 0);
+	],
+  has male;
+
+Object DragonCorpse "труп/ дракона"
+  with name 'мертв' 'дракон' 'труп' 'тел',
+       initial "На полу валяется мертвый дракон.",
+       before
+       [; Attack: "Прекратите -- он ведь уже дохлый!"; ],
+  has  static male;
+
+! ----------------------------------------------------------------------------
+!   Еще один лабиринт
+! ----------------------------------------------------------------------------
+
+DeadEndRoom Dead_End_8
+  with description "Путь дальше прегражден обвалом. Похоже, что Вы опять в тупике.",
+       s_to In_Tall_E_W_Canyon,
+       out_to In_Tall_E_W_Canyon;
+
+MazeRoom Alike_Maze_11
+  with n_to Alike_Maze_1,
+       w_to Alike_Maze_11,
+       s_to Alike_Maze_11,
+       e_to Dead_End_9,
+       ne_to Dead_End_10;
+
+DeadEndRoom Dead_End_9
+  with w_to Alike_Maze_11,
+       out_to Alike_Maze_11;
+
+DeadEndRoom Dead_End_10
+  with s_to Alike_Maze_3,
+       out_to Alike_Maze_3;
+
+MazeRoom Alike_Maze_12
+  with s_to At_Brink_Of_Pit,
+       e_to Alike_Maze_13,
+       w_to Dead_End_11;
+
+MazeRoom Alike_Maze_13
+  with n_to At_Brink_Of_Pit,
+       w_to Alike_Maze_12,
+       nw_to Dead_End_13;
+
+DeadEndRoom Dead_End_11
+  with e_to Alike_Maze_12,
+       out_to Alike_Maze_12;
+
+DeadEndRoom Dead_End_12
+  with u_to Alike_Maze_8,
+       out_to Alike_Maze_8;
+
+MazeRoom Alike_Maze_14
+  with u_to Alike_Maze_4,
+       d_to Alike_Maze_4;
+
+DeadEndRoom Dead_End_13
+  with se_to Alike_Maze_13,
+       out_to Alike_Maze_13,
+       description "Именно в этом тупике находится логово пирата!",
+       initial
+       [; StopDaemon(Pirate);
+          if (treasure_chest in self && treasure_chest hasnt moved)
+              "Вы обнаружили пиратский сундук с сокровищами!";
+       ],
+  has  nodwarf;
+
+Treasure -> treasure_chest "сундук/ с сокровищами"
+  with name 'сундук' 'клад' 'сокровищ' 'ценност',
+       depositpoints 12,
+       description
+	"Сундук пирата наполнен до краев самыми разнообразными ценностями!",
+       initial "Здесь на полу стоит сундук с сокровищами!",
+  has male;
+
+! ----------------------------------------------------------------------------
+!   Над гигантским растением: Огромная комната и Водопад
+! ----------------------------------------------------------------------------
+
+Object In_Narrow_Corridor "В узком коридоре"
+  with description
+	"Вы в длинном, узком коридоре, идущим на запад за пределы видимости.
+	 В восточном конце коридора есть отверстие,
+	 сквозь которое виднеется густая зеленая листва.",
+       d_to In_West_Pit,
+       w_to In_Giant_Room,
+       e_to In_West_Pit,
+       before
+       [; Jump: deadflag=1; "Вы упали, и сломали себе шею!"; ];
+
+Object -> "лист/ья"
+  with name 'лист' 'листв' 'растен' 'ствол' 'стебел',
+  description
+	"Листья принадлежат гигантскому растению,
+	 по стволу которого Вы забрались сюда.",
+  before [;  Count: "69 105. Ровно."; ],
+  has  scenery pluralname;
+
+Object At_Steep_Incline "Крутой спуск над огромной комнатой"
+  with description
+	"Здесь проход делает резкий спуск в очень большую пещеру.
+	 Спуститься вниз можно, но вскарабкаться обратно будет нереально.
+	 Другой проход ведет отсюда на север.",
+       n_to In_Cavern_With_Waterfall,
+       d_to In_Large_Low_Room;
+
+Object In_Giant_Room "Огромная комната"
+  with description
+	"Вы в комнате потрясающих размеров.
+	 Потолок здесь настолько высок, что свет лампы его не достигает.
+	 Пещерные проходы ведут отсюда на восток, север и юг.
+	 На западной стене нацарапано заклинание: ~Fee fie foe foo~ [sic].",
+       s_to In_Narrow_Corridor,
+       e_to At_Recent_Cave_In,
+       n_to In_Immense_N_S_Passage;
+
+Object -> "надпис/ь на стене"
+  with name 'нацарапанн' 'надпис',
+       description "Написано: ~Fee fie foe foo [sic].~",
+  has  scenery female;
+
+Treasure -> golden_eggs "полн/ое гнезд/о золотых яиц"
+  with name 'полн' 'гнезд' 'золот' 'яйц',
+       depositpoints 14,
+       initial "Здесь лежит большое золотое гнездо, полное золотых яиц!",
+       description "Гнездо заполнено красивыми золотыми яйцами!",
+       has  multitude neuter;
+
+Object At_Recent_Cave_In "У свежего обвала"
+  with description "Путь дальше прегражден недавним камнепадом.",
+       s_to In_Giant_Room;
+
+Object In_Immense_N_S_Passage "Широкий С-Ю проход"
+  with description "Вы в одном из концов широкого прохода с севера на юг.",
+       s_to In_Giant_Room,
+       n_to
+       [; if (RustyDoor has locked) <<Open RustyDoor>>;
+          if (RustyDoor hasnt open)
+          { give RustyDoor open; print "(сначала открыв ржавую дверь...)^"; }
+          return RustyDoor;
+       ];
+
+Object -> RustyDoor "ржав/ая железн/ая двер/ь"
+  with name 'больш' 'ржав' 'железн' 'двер' 'петл',
+       description "Это просто большая железная дверь со следами ржавчины.",
+       when_open   "Путь на север ведет через массивную ржавую железную дверь.",
+       when_closed "Путь на север прегражден массивной ржавой железной дверью.",
+       door_to In_Cavern_With_Waterfall,
+       door_dir n_to,
+       before
+       [; Open:  if (RustyDoor has locked)
+                    "Дверные петли заржавели настолько, что дверь невозможно открыть.";
+          Close: if (RustyDoor has open)
+                    "Учитывая все усилия, затраченные на открывание двери,
+                     лучше ее больше не закрывать.";
+                 "Вообще-то она и так закрыта.";
+          Oil:   if (bottle in player && oil_in_the_bottle in bottle)
+                 {   remove oil_in_the_bottle;
+                     give RustyDoor ~locked openable;
+                     "Теперь, когда петли хорошо промаслены,
+                      дверь, хотя и с трудом, можно открыть!";
+                 }
+                 else "У Вас нет с собой ни капли масла!";
+          Water: if (bottle in player && water_in_the_bottle in bottle)
+                 {   remove water_in_the_bottle;
+                     give RustyDoor locked ~open;
+                     "Политые водой петли заржавели опять!";
+                 }
+                 else "У Вас нет с собой ни капли воды!";
+       ],
+       after
+       [; Open: "Дверь отворилась с жутким скрипом и дождем из осыпающейся ржавчины.";
+       ],
+  has  static door locked female;
+
+Object In_Cavern_With_Waterfall "Пещера с водопадом"
+  with description
+	"Вы находитесь в великолепной комнате.
+	 Здесь бурный поток обрушивается сверху сверкающим водопадом в клокочущий бассейн,
+	 из которого вытекает через отверстие в полу.
+	 Отдельные проходы ведут на юг и на запад.",
+       s_to In_Immense_N_S_Passage,
+       w_to At_Steep_Incline;
+
+Object -> "водопад/"
+  with name 'сверкающ' 'бурн' 'водопад' 'поток',
+  description "Не советовал бы спускаться по нему в бочке!",
+  has  scenery male;
+
+Treasure -> trident "трезуб/е/ц/ с драгоценностями"
+  with name 'драгоценн' 'трезубец' 'трезубц',
+       description "Весь трезубец усыпан драгоценными камнями!",
+       initial "Здесь лежит трезубец, усеянный драгоценностями!",
+	casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'е', 0);
+	],
+       depositpoints 14
+  has male;
+
+! ----------------------------------------------------------------------------
+!   Пещеры вокруг "Лоскутного одеяла"
+! ----------------------------------------------------------------------------
+
+Object In_Soft_Room "Мягкая комната"
+  with description
+	"Вы находитесь в комнате, к которой подходит одно определение -- мягкая.
+	 Стены завешены бархатными шторами, пол покрыт толстым ковром,
+	 а на потолоке растет густой мягкий мох.",
+       w_to In_Swiss_Cheese_Room;
+
+Object -> "мягк/ий ков/е/р/"
+  with name 'мягк' 'плюшев' 'ковер' 'ковр',
+       description "Очень мягкий плюшевый ковер",
+       casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'е', 0);
+	],
+  has  scenery male;
+
+Object -> "бархатн/ые штор/ы"
+  with name 'массивн' 'бархатн' 'занавеск' 'штор',
+       description "Массивные бархатные шторы обеспечивают отличную звукоизоляцию.",
+       before
+       [; Take: "Хотите и здесь немного пограбить?";
+          LookUnder, Search:
+            "За занавесками не обнаружилось ничего интересного.";
+       ],
+  has  scenery pluralname;
+
+Object -> "мох/"
+  with name 'густ' 'влажн' 'мох',
+       description "Вполне обыкновенный, густой и влажный мох.",
+       before
+       [;  Take: "В Вашей руке он рассыпался в пыль.";
+       ],
+  has  scenery edible male;
+
+Object -> velvet_pillow "бархатн/ая подушк/а"
+  with name 'маленьк' 'бархатн' 'подушк',
+       description "Маленькая бархатная подушка.",
+       initial "Небольшая бархатная подушка валяется на полу.",
+       has female;
+
+Object In_Oriental_Room "Азиатская комната"
+	with description
+	"Стены комнаты покрыты рисунками в азиатском стиле.
+	 Плавно поднимающийся проход ведет к северу,
+	 другой проход -- на Ю-В, а узкий лаз открывает путь на запад.",
+       w_to In_Large_Low_Room,
+       se_to In_Swiss_Cheese_Room,
+       u_to In_Misty_Cavern,
+       n_to In_Misty_Cavern;
+
+Object -> "древн/ие восточн/ые рисунк/и"
+  with name 'древн' 'восточн' 'настенн' 'рисунк' 'изображен' 'живопис',
+       description "Изображения разных людей и животных.",
+  has  scenery multitude pluralname;
+
+Treasure -> ming_vase "китайск/ая ваз/а"
+  with name 'ценн' 'хрупк' 'китайск' 'ваз',
+       description "Это -- исключительно ценная и хрупкая китайская ваза!",
+       depositpoints 14,
+       after
+       [; Drop: if (velvet_pillow in location)
+                {   print "(осторожно укладывая вазу на бархатную подушку...)^";
+                    rfalse;
+                }
+                remove ming_vase; move shards to location;
+                "Ваза разбилась вдребезги с очень мелодичным звоном.";
+       ],
+       before
+       [; Attack: remove ming_vase; move shards to location;
+             "Вы деликатно брякнули вазу об пол -- с предсказуемым результатом.";
+          Receive: "Ваза очень хрупкая. Не стоит в нее ничего класть!";
+       ]
+  has female;
+
+Object shards "куч/а фарфоровых черепков"
+  with name 'куч' 'фарфор' 'фарфоров' 'черепк' 'осколк' 'мусор',
+       initial "На полу валяется небольшая кучка фарфоровых черепков.",
+       description
+	"Похоже, что это остатки того, что было некогда бесценной китайской вазой.
+	 Какой только недоумок умудрился ее разбить?!",
+  has  multitude female;
+
+Object In_Misty_Cavern "Туманная пещера"
+  with description
+	"Вы продвигаетесь по широкой тропе вдоль стены большой пещеры.
+	 Глубоко внизу, за пеленой плотного белого тумана, что-то плещется.
+	 Туман медленно просачивается вверх сквозь расщелину в потолке.
+	 Тропа продолжается отсюда на юг и на запад.",
+       s_to In_Oriental_Room,
+       w_to In_Alcove;
+
+Object -> "расщелин/а"
+  with name 'трещин' 'расщелин' 'щел',
+       description "Она слишком высоко, чтобы можно было рассмотреть детали.",
+  has  scenery female;
+
+! ----------------------------------------------------------------------------
+!   Изумруд и платиновая пирамида
+! ----------------------------------------------------------------------------
+
+Object In_Alcove "Альков"
+  with description
+	"Вы находитесь в каменном алькове.
+	 Узкая дорога на северо-запад чуть дальше становится шире.
+	 Очень узкий -- почти непроходимый -- туннель ведет на восток.
+	 Оттуда пробивается зловещее зеленоватое свечение.",
+       nw_to In_Misty_Cavern,
+       e_to
+       [ j; j=children(player);
+         if (j==0 || (j==1 && egg_sized_emerald in player))
+             return In_Plover_Room;
+         "У Вас есть нечто, что мешает Вам протиснуться сквозь туннель.
+          Если хотите идти дальше, это придется оставить.";
+       ];
+
+Object In_Plover_Room "Изумрудная комната"
+  with description
+	"Вы в маленькой камере, освещенной мрачным зеленым светом.
+	 Очень узкий туннель ведет отсюда на запад,
+	 а коридор, погруженный во мрак -- на северо-восток.",
+       ne_to In_Dark_Room,
+       w_to
+       [ j; j=children(player);
+         if (j==0 || (j==1 && egg_sized_emerald in player))
+             return In_Alcove;
+         "У Вас есть нечто, что не дает возможности протиснуться сквозь туннель.
+          Если хотите идти дальше, это придется оставить.";
+       ],
+       before
+       [; Plover: if (egg_sized_emerald in player)
+                  move egg_sized_emerald to In_Plover_Room;
+                  PlayerTo(At_Y2); rtrue;
+          Go: if (noun==out_obj) <<Go w_obj>>;
+       ],
+  has  light;
+
+Treasure -> egg_sized_emerald "больш/ой изумруд/"
+  with name 'больш' 'изумруд',
+       depositpoints 14,
+       description "Кстати говоря, яйца ржанки очень большие.",
+       initial "Здесь лежит изумруд размером с яйцо ржанки!",
+  has male;
+
+Object In_Dark_Room "Темная комната"
+  with description
+	"Вы находитесь в темной комнате.
+	 Единственный выход наружу -- коридор, ведущий на юг.",
+       s_to In_Plover_Room
+  has  nodwarf;
+
+Object -> "каменн/ая доск/а"
+  with name 'каменн' 'массивн' 'доск',
+       initial
+	"На встроенной в стену массивной каменной доске выгравировано:
+	 ~Спасибо Вам за то, что Вы принесли немного света в темную комнату!~",
+  has  static female;
+
+Treasure -> "платинов/ая пирамид/а"
+  with name 'платинов' 'пирамид',
+       initial "Здесь лежит пирамида из платины высотой в восемь дюймов!",
+       depositpoints 14,
+       description "Платиновая пирамида высотой в восемь дюймов!",
+       has female;
+
+! ----------------------------------------------------------------------------
+!   К северу от сложного перекрестка (длинный коридор)
+! ----------------------------------------------------------------------------
+
+Object In_Arched_Hall "Сводчатый зал"
+  with description
+	"Вы находитесь в зале со сводчатым потолком.
+	 Наверх и на восток отсюда когда-то вел коралловый проход,
+	 но теперь он забит разным мусором.
+	 В воздухе ощущается сильный запах моря.",
+       d_to In_Shell_Room;
+
+Object In_Shell_Room "Ракушечный грот"
+  with description
+	"Вы находитесь в большой сводчатой комнате в глубине скалы.
+	 Обломки морских раковин покрывают камень стен и потолка.
+	 Низкий проход открывает путь вниз; другой, более пологий -- вверх.
+	 Узкий, проходимый только на четвереньках лаз ведет сюда с юга.",
+       u_to In_Arched_Hall,
+       d_to In_Ragged_Corridor,
+       s_to
+       [; if (giant_bivalve in player)
+          {   if (giant_bivalve has open)
+                  "Пятифутовая устрица не протиснется сквозь узкий проход!";
+              else
+                  "Пятифутовый моллюск не протиснется сквозь узкий проход!";
+          }
+          return At_Complex_Junction;
+       ];
+
+Object -> giant_bivalve "гигантск/ий моллюск/"
+  with name 'гигантск' 'огромн' 'двустворчат' 'моллюск' 'устриц',
+       describe
+       [; if (self has general)
+    		"Здесь лежит огромная устрица (створки раковины плотно закрыты).";
+       		"Здесь лежит огромный моллюск (створки раковины плотно закрыты).";
+       ],
+       before
+       [; Examine: if (location==At_Ne_End or At_Sw_End)
+                "Интересно. На нижней стороне раковины появилась надпись:^^
+                ~В этом месте один из известных Вам предметов имеет другое применение.~";
+                "Нечто вроде двустворчатого моллюска больших размеров.";
+          Open:
+                "Открыть раковину голыми руками у Вас не хватит сил.";
+          Unlock:
+                if (second~=trident)
+                    print "Чтобы разжать створки раковины, ", (cGen) second, " недостаточно.";
+                if (self has general)
+                    "Раковина неохотно открылась, но ничего, кроме самого моллюска,
+                     внутри не оказалось. Створки немедленно захлопнулись опять.";
+                give self general; move pearl to In_A_Cul_De_Sac;
+                "Из раковины выкатилась перламутровая жемчужина!
+                 Похоже, что моллюск -- действительно жемчужная устрица!
+                 Так это или не так, но он опять плотно сжал створки раковины.";
+          Attack:
+                "Раковина очень прочная -- ее невозможно разбить или пробить.";
+       ]
+       has male;
+
+Treasure pearl "перламутров/ая жемчужин/а"
+  with name 'больш' 'перламутров' 'жемчужин',
+       description "Ее размеры поражают воображение!",
+       initial "На полу лежит большая перламутровая жемчужина!",
+       depositpoints 14
+  has female;
+
+Object In_Ragged_Corridor "Изломанный коридор"
+  with description "Вы в длинном наклонном коридоре с неровными каменными стенами.",
+       u_to In_Shell_Room,
+       d_to In_A_Cul_De_Sac;
+
+Object In_A_Cul_De_Sac "Глухой тупик"
+  with description "Вы в тупиковой пещере, примерно в восемь футов шириной.",
+       u_to In_Ragged_Corridor,
+       out_to In_Ragged_Corridor;
+
+! ----------------------------------------------------------------------------
+!   Witt's End ("недостроенная" пещера)
+! ----------------------------------------------------------------------------
+
+Object In_Anteroom "В передней"
+  with description
+	"Вы в небольшой комнате, откуда на восток ведет широкий проход.
+	 Более узкие коридоры открывают путь на запад и вверх.
+	 Легко заметить, что совсем недавно здесь велись земляные работы.",
+       u_to At_Complex_Junction,
+       w_to In_Bedquilt,
+       e_to At_Witts_End;
+
+Object -> "предупрежден/ие"
+  with name 'знак' 'надпис' 'предупрежден',
+  initial "Над Вашей головой висит знак с надписью:
+	   ~За этой комнатой пещера еще не достроена. Идти дальше не советуем!
+	   [Строительная компания]~",
+           before [; Take: "Рукой до него не достать."; ],
+  has  static neuter;
+
+Object -> "свеж/ие номер/а ~Ежедневника кладоискателя~"
+  with name 'свеж' 'журнал' 'номер' 'ежедневник',
+       initial "Здесь лежит несколько свежих номеров ~Ежедневника кладоискателя~.",
+       description "Как жаль, что все они на гномьем!",
+       after
+       [; Take: if (location==At_Witts_End) score --;
+          Drop: if (location==At_Witts_End) score ++;
+       ],
+  has  multitude pluralname;
+
+Object At_Witts_End "Тупейший из тупиков"
+  with
+  description "Вы в очень странном тупике -- отсюда проходы ведут
+  	во *всех* возможных направлениях.",
+       w_to   "Поползав немного в боковых ответвлениях, Вы обнаружили, что путь прегражден
+       	       недавним оползнем. Пришлось вернуться назад.",
+       before
+       [; Go: if (noun~=w_obj && random(100)<=95)
+              "Полазив немного в боковых ответвлениях, Вы внезапно очутились в главном проходе.";
+              PlayerTo(In_Anteroom); rtrue;
+       ];
+
+! ----------------------------------------------------------------------------
+!   К северу от секретных каньонов, на другой стороне пропасти
+! ----------------------------------------------------------------------------
+
+Object In_Mirror_Canyon "Зеркальный каньон"
+  with description
+	"Вы в длинном каньоне, ведущем с севера на юг, примерно в 25 футов шириной.
+	 Пол затянут пеленой белого тумана, просачивающегося откуда-то с севера.
+	 Стены поднимаются вверх больше, чем на сто футов.
+	 Высоко над Вашей головой и параллельно стенам каньона
+	 висит очень большое двухстороннее зеркало.^^
+	 Напротив друг друга, в каждой из стен есть по маленькому окну -- 
+	 их разделяет примерно пятьдесят футов.",
+       s_to In_Secret_N_S_Canyon_0,
+       n_to At_Reservoir;
+
+Object -> "зеркал/о под потолком"
+  with name 'больш' 'висящ' 'подвешенн' 'зеркал',
+  description "Похоже, что зеркало здесь повесили гномы
+	 (они, как известно, всегда чрезвычайно озабочены собственной внешностью).",
+  initial "Похоже, что зеркало повешено сюда гномами,
+  	   которые всегда чрезмерно озабочены собственной внешностью.",
+  before [; Attack, Remove: "Отсюда до него невозможно добраться."; ],
+  has  static neuter;
+
+Object At_Window_On_Pit_2 "У окна над пропастью"
+  with description
+	"Вы у низкого окна над глубокой пропастью, уходящей за пределы видимости.
+	 Лишь с большим трудом можно разглядеть дно примерно 50 футами ниже.
+	 Клочья белого тумана скрывают его, сгущаясь слева от Вас.
+	 Пыль вокруг окна покрыта отметками, указывающими на то,
+	 что кто-то был здесь совсем недавно.
+	 По другую сторону провала, в 20 футах отсюда,
+	 можно видеть очень похожее окно, освещенное изнутри.
+	 За окном находится туманная фигура человека, который, похоже,
+	 уставился на Вас.",
+       before
+       [; WaveHands: "Туманная фигура помахала Вам в ответ!"; ],
+       cant_go "Единственный путь отсюда -- назад к перекрестку.",
+       w_to At_Junction_Of_Three;
+
+Object At_Reservoir "У большого бассейна"
+  with description
+	"Вы стоите у края большого подземного бассейна.
+	 Облако белого тумана заполняет всю комнату и быстро поднимается вверх.
+	 Воду в бассейн приносит ручей, вытекающий из отверстия в стене
+	 десятью футами над Вашей головой и с шумом обрушивающийся в бассейн
+	 где-то среди тумана. Единственный выход отсюда ведет на юг.",
+       s_to In_Mirror_Canyon,
+       out_to In_Mirror_Canyon,
+       before
+       [; Swim: "Вода в бассейне холодна как лед, и Вы быстро замерзнете насмерть!"; ];
+
+! ----------------------------------------------------------------------------
+!   Пропасть и мост с троллем
+! ----------------------------------------------------------------------------
+
+Object In_Sloping_Corridor "Наклонный коридор"
+  with description
+	"Вы в середине длинного наклонного коридора
+	 (оба конца которого скрываются за поворотами).",
+       d_to In_Large_Low_Room,
+       u_to On_Sw_Side_Of_Chasm,
+       cant_go "Коридор открывает только два пути: вниз или вверх.";
+
+Object On_Sw_Side_Of_Chasm "На юго-западном краю пропасти"
+  with description
+	"Вы находитесь на краю широкой и глубокой пропасти.
+	 Плотный белый туман, поднимающийся со дна,
+	 мешает рассмотреть как следует ее противоположную сторону.
+	 Путь на юго-запад ведет через наклонный коридор.",
+       ne_to CrossRicketyBridge,
+       sw_to In_Sloping_Corridor,
+       d_to In_Sloping_Corridor,
+       cant_go "Отсюда путь ведет в юго-западном направлении.",
+       before
+       [; Jump: if (RicketyBridge in self)
+		"Вместо того, чтобы изображать кенгуру,
+		 настоятельно советую воспользоваться мостом.";
+              deadflag=1; "Недолет.";
+       ];
+
+[ CrossRicketyBridge;
+  if (Troll has general || Troll in nothing) {
+      give Troll ~general;
+      if (Bear has general)
+      {   remove Bear; remove self; give Wreckage ~absent;
+          remove RicketyBridge; give RicketyBridge absent; StopDaemon(Bear);
+          deadflag=1;
+          "Когда Вы почти добрались до противоположного конца,
+           мост прогнулся и затрещал под тяжестью медведя,
+           преданно следовавшего за Вами. Несколько секунд
+           Вы тщетно хватались за все подряд, но затем мост не выдержал,
+           и его остатки обрушились в пропасть. Вместе с Вами.";
+      }
+      return RicketyBridge;
+  }
+  if (Troll in location) "Тролль не позволит Вам это сделать!";
+  move Troll to location;
+  "Из-за моста появился здоровенный тролль, и молча преградил Вам путь.";
+];
+
+Object -> RicketyBridge "непрочн/ый мост/"
+  with name 'непрочн' 'ненадежн' 'деревянн' 'зыбк' 'мост' 'мостик',
+  description "По виду -- обычный деревянный мост, но выглядит он очень ненадежным.",
+       describe
+       [; print "Непрочный деревянный мостик пересекает пропасть.
+       		 Другой его конец теряется в плотном тумане.^^
+                 Рядом с мостом красуется знак: ~Стой! Плати троллю за проход!~^";
+          if (Troll notin location) "Нигде поблизости тролля не видно.";
+          rtrue;
+       ],
+       door_dir
+       [; if (location==On_Sw_Side_Of_Chasm) return ne_to; return sw_to;
+       ],
+       door_to
+       [; if (location==On_Sw_Side_Of_Chasm) return On_Ne_Side_Of_Chasm;
+          return On_Sw_Side_Of_Chasm;
+       ],
+       found_in  On_Sw_Side_Of_Chasm On_Ne_Side_Of_Chasm
+  has  static door open male;
+
+Object -> -> Troll "росл/ый тролл/ь"
+  with name 'росл' 'здоровенн' 'тролл',
+       description
+	"Тролли состоят в близком родстве со скалами,
+	 и шкура у них еще толще, чем у носорогов.",
+       initial "На мосту стоит здоровенный тролль,
+		и ждет чего-нибудь ценного в уплату за проход.",
+       life
+       [; Attack: "Ваши жалкие попытки поцарапать троллю шкуру немного его повеселили.";
+          ThrowAt, Give:
+              if (noun ofclass Treasure)
+              {   remove noun;
+                  move Troll to RicketyBridge;
+                  give Troll general; score=score-5;
+                  "Тролль ловко схватил ", (cAcc) noun, ", и сразу исчез из виду.";
+              }
+              if (noun==tasty_food)
+                  "Обжорство -- порок, не свойственный троллям.
+                   (В отличие от алчности.)";
+              "Тролль ловко схватил ", (cAcc) noun,
+              ", внимательно осмотрел, и вернул Вам, пробурчав:
+               ~Сработано неплохо, но где рыночная ценность?~";
+          Order: "Надейтесь, что он ничего не слышал.";
+          Answer, Ask: "Тролли -- убогие собеседники.";
+       ],
+  has  animate male;
+
+Object Wreckage "остатк/и моста"
+  with name 'остатк' 'мост' 'труп' 'медвед',
+       initial "На самом дне пропасти можно разглядеть жалкие остатки
+  		рухнувшего моста (вместе с трупом несчастного медведя).",
+       before
+       [; "Все это лежит на самом дне глубокой пропасти."; ],
+       found_in  On_Sw_Side_Of_Chasm On_Ne_Side_Of_Chasm
+  has  static absent pluralname;
+
+Object On_Ne_Side_Of_Chasm "На северо-восточном краю пропасти"
+  with description
+	"Вы на противоположном краю пропасти.
+	 Путь на северо-восток ведет прочь от нее.",
+       sw_to CrossRicketyBridge,
+       ne_to In_Corridor,
+       before
+       [; Jump: if (RicketyBridge in self)
+                    "Вместо того, чтобы изображать кенгуру,
+                     настоятельно советую воспользоваться мостом.";
+              deadflag=1; "Недолет.";
+       ],
+  has  nodwarf;
+
+Object In_Corridor "Шумный коридор"
+  with description
+	"Вы в длинном коридоре, ведущем с востока на запад.
+	 Откуда-то издалека доносится приглушенный рокот.",
+       w_to On_Ne_Side_Of_Chasm,
+       e_to At_Fork_In_Path
+  has  nodwarf;
+
+! ----------------------------------------------------------------------------
+!   Действующий вулкан!
+! ----------------------------------------------------------------------------
+
+Object At_Fork_In_Path "Разветвление"
+  with description
+	"Здесь тропа разветвляется. Путь налево ведет на северо-восток,
+	 откуда, похоже, доносятся рокочущие звуки.
+	 Путь направо ведет на юго-восток, плавно спускаясь вниз.
+	 Путь назад, в основной коридор, лежит в западном направлении.",
+       w_to In_Corridor,
+       ne_to At_Junction_With_Warm_Walls,
+       se_to In_Limestone_Passage,
+       d_to In_Limestone_Passage
+  has  nodwarf;
+
+Object At_Junction_With_Warm_Walls "Горячий перекресток"
+  with description
+	"Стены здесь очень горячие! С севера доносится глухой рев и рокот --
+	 настолько громкие, что стены пещеры ощутимо сотрясаются.
+	 Другой проход ведет на юг, а низкий лаз -- на восток.",
+       s_to At_Fork_In_Path,
+       n_to At_Breath_Taking_View,
+       e_to In_Chamber_Of_Boulders
+  has  nodwarf;
+
+Object At_Breath_Taking_View "Потрясающее зрелище"
+  with description
+	"С края скалы Вашему взору открывается потрясающее зрелище!
+	 Прямо под Вами -- колоссальный действующий вулкан,
+	 извергающий потоки раскаленной лавы, стекающие вниз по его склонам.
+	 Раскаленные докрасна камни освещают багровым светом всю пещеру
+	 вплоть до самых отдаленных ее уголков. В воздухе сильно пахнет серой
+	 и летают угасающие искры и частицы горячего пепла.
+	 Стены очень горячи на ощупь, а рокот извержения заглушает все прочие звуки.
+	 Глубоко в неровном, изломанном потолке заметно множество причудливых вкраплений
+	 белого гипса. С одной стороны видна расселина -- дикая, хаотичная россыпь
+	 из истерзанного камня, похожая на творение самого дьявола.
+	 Огненная река, вытекающая из жерла вулкана, прожигает себе путь вниз по расселине
+	 и обрушивается в бездонный колодец слева от Вас.
+	 А справа от Вас извергается гигантский гейзер,
+	 взметающийся вверх на голом скальном островке в центре
+	 булькающего серного озера. Правая стена пещеры, пышущая жаром и охваченная пламенем,
+	 добавляет еще немного инфернального колорита и без того адскому зрелищу.
+	 Темный и мрачный проход ведет отсюда назад на юг.",
+       s_to At_Junction_With_Warm_Walls,
+       out_to At_Junction_With_Warm_Walls,
+       d_to "Жить надоело?",
+       before [; Jump: <<Go d_obj>>; ],
+  has  light;
+
+Object -> "действующ/ий вулкан/"
+  with name 'действующ' 'величественн' 'мрачн' 'багров' 'вулкан',
+       description
+	"Массивные сгустки лавы, извергаемые жерлом вулкана,
+	 стекают по его склонам в глубокие расселины.
+	 Раскаленные докрасна камни освещают багровым светом всю пещеру,
+	 вплоть до самых отдаленных уголков.
+	 В целом зрелище производит величественное и мрачное впечатление.",
+  has  scenery male;
+
+Object -> "затухающ/ие искр/ы"
+  with name 'затухающ' 'гаснущ' 'искр' 'пепел',
+       description
+	"Искры пролетают слишком далеко и гаснут слишком быстро,
+	 чтобы имело смысл их разглядывать.",
+  has  scenery multitude pluralname;
+
+Object -> "изломанн/ый потол/о/к/"
+  with name 'изломанн' 'потолок' 'потолк' 'гипс' 'вкраплен',
+       description
+	"Высоко над головой, глубоко в неровном и изломанном потолке
+	 заметно множество причудливых вкраплений белого гипса,
+	 отбрасывающих белые призрачные отсветы на стены пещеры.",
+       casegen [ beg end csID;
+	return ICVowel (csID, beg, end, 'о', 0);
+	],
+  has  scenery male;
+
+Object -> "глубок/ая расселин/а"
+  with name 'расселин' 'россып' 'скальн' 'пород' 'хаос',
+       description
+	"Расселина представляет собой дикую, хаотичную россыпь
+	 из истерзанных скальных пород -- будто творение самого дьявола.",
+  has  scenery female;
+
+Object -> "огненн/ая рек/а"
+  with name 'огненн' 'рек' 'бездонн' 'колодец',
+       description
+	"Огненная река, вытекающая из недр вулкана, выжигает все на своем пути вниз по расселине,
+	 прежде чем обрушиться в бездонный колодец где-то слева от Вас.",
+  has  scenery female;
+
+Object -> "гигантск/ий гейзер/"
+  with name 'гигантск' 'гейзер' 'каменн' 'островок'
+            'фонтан' 'булькающ' 'кипящ' 'серн' 'озер',
+       description
+	"На небольшом голом скальном островке в центре булькающего серного озера
+	 взметается вверх фонтан из кипящей воды и пара.",
+  has  scenery male;
+
+Object In_Chamber_Of_Boulders "Камера с булыжниками"
+  with description
+	"Вы находитесь в маленькой камере, полной больших камней.
+	 От стен исходит сильный жар, и воздух здесь такой горячий, что трудно дышать.
+	 Единственный выход отсюда -- это проход, ведущий на запад,
+	 через который доносится приглушенный рокот.",
+       w_to At_Junction_With_Warm_Walls,
+       out_to At_Junction_With_Warm_Walls
+  has  nodwarf;
+
+Object -> "горяч/ие камн/и"
+  with name 'горяч' 'камн' 'булыжник' 'скал',
+       description "Обыкновенные булыжники, но горячие на ощупь.",
+  has  scenery multitude pluralname;
+
+Treasure -> "экзотическ/ие пряност/и"
+  with name 'экзотическ' 'редк' 'пряност' 'приправ',
+       depositpoints 14,
+       before
+       [; Smell, Examine: "Они пахнут на редкость экзотично!";
+       ],
+  has  multitude pluralname;
+
+Object In_Limestone_Passage "Известняковый проход"
+  with description
+	"Вы идете вдоль слегка изгибающегося прохода с севера на юг,
+	 полного известняковых образований причудливой формы.",
+       n_to At_Fork_In_Path,
+       u_to At_Fork_In_Path,
+       s_to In_Front_Of_Barren_Room,
+       d_to In_Front_Of_Barren_Room
+  has  nodwarf;
+
+Object -> "известняков/ые образован/ия"
+  with name 'известняк' 'известников' 'странн'
+            'причудлив' 'образован' 'формац' 'фигур',
+       description "Каждый раз какая-нибудь новая особо причудливая фигура
+       	привлекает Ваш взгляд.",
+  has  scenery multitude pluralname;
+
+! ----------------------------------------------------------------------------
+!   Встреча с пещерным медведем
+! ----------------------------------------------------------------------------
+
+Object In_Front_Of_Barren_Room "У входа в пещеру"
+  with description
+	"Вы стоите на пороге большой полутемной пещеры.
+	 Над входом висит табличка: ~Осторожно! Злой медведь!~",
+       w_to In_Limestone_Passage,
+       u_to In_Limestone_Passage,
+       e_to In_Barren_Room,
+       in_to In_Barren_Room
+  has  nodwarf;
+
+Object -> "табличк/а с предупреждением"
+  with name 'табличк' 'знак' 'предупрежден',
+       description "На табличке написано: ~Осторожно! Злой медведь!~",
+  has  scenery female;
+
+Object In_Barren_Room "Медвежья пещера"
+  with description
+	"Вы внутри просторной и полутемной камеры.
+	 В основном в ней нет ничего, кроме пыли на полу.
+	 Хорошо заметные следы в пыли ведут в дальний угол.
+	 Единственный выход -- там, откуда Вы вошли.",
+       w_to In_Front_Of_Barren_Room,
+       out_to In_Front_Of_Barren_Room
+  has  nodwarf;
+
+Object -> "пыл/ь"
+  with name 'пыл' 'след',
+       description "Самая обыкновенная серая пыль, в которой отпечатались звериные следы.",
+  has  scenery female;
+
+Object -> Bear "огромн/ый пещерн/ый медвед/ь"
+  with following_you false,
+       angry true,
+
+       name 'больш' 'огромн' 'свиреп' 'ручн' 'пещерн' 'медвед',
+
+       describe
+       [; if (self.following_you)
+             "Большой и уже совсем ручной пещерный медведь следует за Вами по пятам.";
+          if (self.angry)
+             "Пещерный медведь свирепо уставился на Вас из дальнего угла комнаты!";
+          if (location==In_Barren_Room)
+             "Пещерный медведь мирно сидит в одном из углов.";
+             "Довольный пещерный медведь бродит где-то поблизости.";
+       ],
+       life
+       [; Attack: if (axe in player) <<ThrowAt axe Bear>>;
+              if (self.angry == false)
+                  "Медведь посмотрел на Вас обиженно --
+                   он ведь хочет дружить с Вами.";
+              "Ваши голые руки -- против его ~голых~ лап?!";
+          ThrowAt: 
+              if (noun~=axe) <<Give noun Bear>>;
+              if (self.angry == false)
+                  "Медведь посмотрел на Вас с укором --
+                   он ведь хочет быть Вашим другом.";
+              move axe to location; give axe general;
+              "Вы промахнулись. Топор упал рядом с медведем, и его (топор) теперь не взять.";
+          Give:
+              if (noun == tasty_food)
+              {   give axe ~general; remove tasty_food;
+                  self.angry = false;
+                 "Медведь жадно сожрал предложенную пищу и облизнулся.
+                  После этого он, похоже, успокоился и решил с Вами подружиться.";
+              }
+              if (self.angry == false)
+                  "Кажется, ", cNom (noun), " медведя не очень интересует.";
+              "Ой-ой! Ваше щедрое предложение его только разозлило еще сильнее!";
+          Order, Ask, Answer: "Это всего лишь медведь (с очень небольшим мозгом).";
+       ],
+       before
+       [; Examine:
+              print "Медведь выглядит очень большим";
+              if (self.angry == false) ", но вполне дружелюбным.";
+              " и очень свирепым!";
+
+          Take, Catch:
+              if (self.angry) "Анекдотик про охотника и медведя помните?";
+              if (golden_chain has locked)
+                  "Медведь прикован к стене прочной золотой цепью.";
+              self.following_you = true; StartDaemon(Bear);
+              "Ладно, теперь медведь будет следовать за Вами по пятам.";
+
+          Drop, Release:
+              if (self.following_you == false) "Это в смысле?";
+              self.following_you = false; StopDaemon(Bear);
+              if (Troll in location)
+              {   remove Troll;
+                  "Медведь направился прямо к троллю...
+                   Тот испуганно взвыл и растворился в темноте.
+                   Медведю быстро надоело его преследовать, и он вернулся к Вам.";
+              }
+              "Ладно, теперь медведь оставит Вас в покое.";
+       ],
+
+       daemon
+       [; if (location==thedark) rfalse;
+          if (self in location)
+          {   if (location==At_Breath_Taking_View)
+                  "^Медведь у Вас за спиной восторженно взревел!";
+              rfalse;
+          }
+          move self to location;
+          "^Медведь неотступно следует за Вами.";
+       ],
+  has  animate male;
+
+Treasure -> golden_chain "злат/ая цеп/ь"
+  with name 'цеп' 'звен' 'кольц' 'массивн' 'золот' 'злат',
+       description "Цепь состоит из массивных золотых звеньев!",
+       depositpoints 14,
+       describe
+       [; if (self has locked) "Цепь приковывает к стене пещерного медведя.";
+          "Тяжелая золотая цепь лежит на полу!";
+       ],
+       with_key set_of_keys,
+       before
+       [; Take: if (self has locked)
+                {   if (Bear.angry) "Один ее конец соединен со свирепым медведем!";
+                    "Один ее конец соединен с дружелюбным медведем.";
+                }
+          Unlock:
+                if (Bear.angry)
+                   "Медведь выглядит таким свирепым, что к цепи лучше не приближаться!";
+          Lock: if (self hasnt locked) "Замок на цепи был одноразового действия.";
+       ],
+       after
+       [; Unlock: "Вы отперли замок, и теперь медведь -- к счастью, уже ручной --
+       		   на свободе.";
+       ],
+  has  lockable locked female;
+
+! ----------------------------------------------------------------------------
+!   Лабиринт из запутанных узких проходов (и все разные)...
+! ----------------------------------------------------------------------------
+
+Class  DiffMazeRoom
+  with short_name "Maze";
+
+DiffMazeRoom Different_Maze_1
+  with description
+          "Вы в лабиринте запутанных узких проходов (все разные).",
+       s_to  Different_Maze_3,
+       sw_to Different_Maze_4,
+       ne_to Different_Maze_5,
+       se_to Different_Maze_6,
+       u_to  Different_Maze_7,
+       nw_to Different_Maze_8,
+       e_to  Different_Maze_9,
+       w_to  Different_Maze_10,
+       n_to  Different_Maze_11,
+       d_to  At_West_End_Of_Long_Hall;
+
+DiffMazeRoom Different_Maze_2
+  with description
+          "Вы в лабиринте узких запутанных проходов (все разные).",
+       sw_to Different_Maze_3,
+       n_to Different_Maze_4,
+       e_to Different_Maze_5,
+       nw_to Different_Maze_6,
+       se_to Different_Maze_7,
+       ne_to Different_Maze_8,
+       w_to Different_Maze_9,
+       d_to Different_Maze_10,
+       u_to Different_Maze_11,
+       s_to Dead_End_14;
+
+DiffMazeRoom Different_Maze_3
+  with description
+          "Вы в лабиринте проходов, узких и запутанных (все разные).",
+       w_to Different_Maze_1,
+       se_to Different_Maze_4,
+       nw_to Different_Maze_5,
+       sw_to Different_Maze_6,
+       ne_to Different_Maze_7,
+       u_to Different_Maze_8,
+       d_to Different_Maze_9,
+       n_to Different_Maze_10,
+       s_to Different_Maze_11,
+       e_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_4
+  with description
+          "Вы в лабиринте проходов, запутанных и узких (все разные).",
+       nw_to Different_Maze_1,
+       u_to Different_Maze_3,
+       n_to Different_Maze_5,
+       s_to Different_Maze_6,
+       w_to Different_Maze_7,
+       sw_to Different_Maze_8,
+       ne_to Different_Maze_9,
+       e_to Different_Maze_10,
+       d_to Different_Maze_11,
+       se_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_5
+  with description
+          "Вы в запутанном лабиринте из узких проходов (все разные).",
+       u_to Different_Maze_1,
+       d_to Different_Maze_3,
+       w_to Different_Maze_4,
+       ne_to Different_Maze_6,
+       sw_to Different_Maze_7,
+       e_to Different_Maze_8,
+       n_to Different_Maze_9,
+       nw_to Different_Maze_10,
+       se_to Different_Maze_11,
+       s_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_6
+  with description
+          "Вы в узком лабиринте из запутанных проходов (все разные).",
+       ne_to Different_Maze_1,
+       n_to Different_Maze_3,
+       nw_to Different_Maze_4,
+       se_to Different_Maze_5,
+       e_to Different_Maze_7,
+       d_to Different_Maze_8,
+       s_to Different_Maze_9,
+       u_to Different_Maze_10,
+       w_to Different_Maze_11,
+       sw_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_7
+  with description
+          "Вы запутались в узком лабиринте из проходов (все разные).",
+       n_to Different_Maze_1,
+       se_to Different_Maze_3,
+       d_to Different_Maze_4,
+       s_to Different_Maze_5,
+       e_to Different_Maze_6,
+       w_to Different_Maze_8,
+       sw_to Different_Maze_9,
+       ne_to Different_Maze_10,
+       nw_to Different_Maze_11,
+       u_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_8
+  with description
+          "Вы запутались в лабиринте из узких проходов (все разные).",
+       e_to Different_Maze_1,
+       w_to Different_Maze_3,
+       u_to Different_Maze_4,
+       sw_to Different_Maze_5,
+       d_to Different_Maze_6,
+       s_to Different_Maze_7,
+       nw_to Different_Maze_9,
+       se_to Different_Maze_10,
+       ne_to Different_Maze_11,
+       n_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_9
+  with description
+          "Лабиринт из узких проходов (все разные) совсем запутал Вас.",
+       se_to Different_Maze_1,
+       ne_to Different_Maze_3,
+       s_to Different_Maze_4,
+       d_to Different_Maze_5,
+       u_to Different_Maze_6,
+       nw_to Different_Maze_7,
+       n_to Different_Maze_8,
+       sw_to Different_Maze_10,
+       e_to Different_Maze_11,
+       w_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_10
+  with description
+          "Узкий лабиринт из проходов (все разные) совсем запутал Вас.",
+       d_to Different_Maze_1,
+       e_to Different_Maze_3,
+       ne_to Different_Maze_4,
+       u_to Different_Maze_5,
+       w_to Different_Maze_6,
+       n_to Different_Maze_7,
+       s_to Different_Maze_8,
+       se_to Different_Maze_9,
+       sw_to Different_Maze_11,
+       nw_to Different_Maze_2;
+
+DiffMazeRoom Different_Maze_11
+  with description
+          "Проходы узкого лабиринта (все разные) совсем запутали Вас.",
+       sw_to Different_Maze_1,
+       nw_to Different_Maze_3,
+       e_to Different_Maze_4,
+       w_to Different_Maze_5,
+       n_to Different_Maze_6,
+       d_to Different_Maze_7,
+       se_to Different_Maze_8,
+       u_to Different_Maze_9,
+       s_to Different_Maze_10,
+       ne_to Different_Maze_2;
+
+DeadEndRoom Dead_End_14
+  with short_name "Тупик (рядом с торговым автоматом)",
+       description
+	"Вы в тупике -- дальше пути нет.
+	 Однако, здесь стоит здоровенный торговый автомат!",
+       n_to Different_Maze_2,
+       out_to Different_Maze_2
+  has  nodwarf;
+
+Object -> "надпис/ь в пыли"
+  with name 'надпис' 'сообщен',
+       description
+           "Надпись сообщает: ~Нет, это не тот лабиринт, где пират прячет свои сокровища!~",
+       initial "Интересно! На слое пыли витиеватым почерком выведено сообщение для Вас."
+  has  scenery female;
+
+Object -> VendingMachine "торгов/ый автомат/"
+  with name 'торгов' 'автомат' 'машин' 'щел',
+       description
+	"На торговом автомате есть инструкция:
+	 ~Опустите монету, чтобы получить пару батареек.~",
+       before
+       [; Receive:
+             if (noun==rare_coins)
+             {   move fresh_batteries to location;
+                 remove rare_coins;
+                 "Вы опустили монетки в щель, машина заурчала и затряслась,
+                  и набор свежих батареек вывалился из нее прямо к Вашим ногам.";
+             }
+             "Похоже, что в щель можно вставлять только монеты.";
+          Attack:
+             "Похоже, что автомат сертифицирован на вандалоустойчивость.
+              Несмотря на все Ваши усилия, на нем не осталось даже царапины!";
+          LookUnder:
+               "Под автоматом нет ничего, кроме пыли.";
+          Search:
+               "Для этого надо вскрыть его!";
+          Take:
+               "Автомат слишком громоздок и тяжел, чтобы считаться портативным.";
+       ],
+  has  scenery male;
+
+Object fresh_batteries "свеж/ие батарейк/и" VendingMachine
+  with name 'нов' 'свеж' 'обыкновенн' 'батарейк',
+       description "Выглядят, как пара обыкновенных электробатареек.
+  		    (Замогильный голос произнес: ~И работают -- тоже!~)",
+       initial "Здесь лежит пара свежих батареек.",
+       before [; Count: "Парочка."; ]
+       has pluralname;
+
+Object old_batteries "использованн/ые батарейк/и"
+  with name 'использованн' 'севш' 'обыкновенн' 'батарейк',
+       description "Выглядят, как пара обыкновенных электробатареек.",
+       initial "Пара использованных батареек валяется на полу.",
+       before [; Count: "Парочка."; ]
+       has pluralname;
+
+! ----------------------------------------------------------------------------
+!   Злобные маленькие гномы!
+! ----------------------------------------------------------------------------
+
+Object dwarf "маленьк/ий злобн/ый гном/"
+  with name 'маленьк' 'злобн' 'агрессивн' 'гном' 'гномик' 'карлик' 'урод',
+       description "Наверное, лучше держаться от него подальше.
+       		    Больно уж злобным и агрессивным он выглядит!",
+       initial "Где-то во тьме прячется маленький злобный гном.",
+       number 5,
+
+       daemon
+       [; if (location==thedark) return;
+          if (self.number==0) { StopDaemon(self); return; }
+          if (parent(dwarf)==0)
+          {   if (location has nodwarf || location has light) return;
+              if (random(100)<=self.number)
+              {   if (Bear in location || Troll in location) return;
+                  new_line;
+                  if (Dragon in location)
+                  {   self.number--;
+                      "Внезапно откуда-то появился маленький гном.
+                       Но дракон дохнул огнем... и от гнома остались дымок и горстка пепла!";
+                  }
+                  move dwarf to location;
+                  "Маленький злобный гном появился из темноты!";
+              }
+              return;
+          }
+          if (parent(dwarf)~=location)
+          {   if (location==thedark) return;
+              if (location has nodwarf || location has light) return;
+              if (random(100)<=96 && parent(dwarf)~=In_Mirror_Canyon)
+              {   move dwarf to location;
+                  print "^Гном не намерен отставать от Вас...^";
+              }
+              else { remove dwarf; return; }
+          }
+          if (random(100)<=75)
+          {   new_line;
+              if (self hasnt general)
+              {   move axe to location; give self general; remove self;
+                  "Гном швырнул в Вас маленький острый топор,
+                   промахнулся, злобно выругался, и растворился во тьме.";
+              }
+              if (location==In_Mirror_Canyon)
+                  "Гном любуется своим отражением в гигантском зеркале.";
+              print "Гном швырнул в Вас маленький острый нож... ";
+              if (random(1000)<=95) { deadflag=1; "и попал в цель!"; }
+              "но промахнулся!";
+          }
+          if (random(3)==1) {
+          	remove dwarf;
+          	"^Похоже, что гному все это надоело -- он убрался прочь.";
+          	}
+       ],
+       before
+       [; Kick: "Пинок был удачным -- гном улетел в противоположный конец комнаты.
+       		 Он выругался, вскочил на ноги и торопливо отряхнулся.
+       		 Надо ли говорить, что теперь он еще злее, чем раньше!";
+       ],
+       life
+       [; ThrowAt:
+           if (noun==axe)
+           {   if (random(3)~=1)
+               {   remove self; move axe to location;
+                   self.number--;
+                   "Вы убили гнома наповал!
+                    Его тело бесследно исчезло в облаке густого черного дыма.";
+               }
+               move axe to location;
+               "Промах! Маленький гном ловко увернулся от топора.";
+           }
+           <<Give noun second>>;
+
+          Give:
+           if (noun==tasty_food)
+           	"Ох, как глупо -- ведь гномы питаются только углем!
+                 Похоже, что он только взбесился еще больше!";
+           "Гном не слишком интересуется Вашим предложением.
+            (Может быть потому, что если он убьет Вас,
+             он и так заберет все Ваши сокровища себе.)";
+
+          Attack: "Голыми руками? Это же самоубийство!";
+       ],
+  has  animate male;
+
+Object axe "гном/ий топор/"
+  with name 'гном' 'маленьк' 'топор' 'топорик',
+       initial "Здесь лежит маленький топор.",
+       description "Маленький топор гномьей работы.",
+       before
+       [; if (axe hasnt general) rfalse;
+          Examine: "Он лежит рядом с медведем.";
+          Take:    "Не стоит. Он лежит рядом со свирепым медведем,
+                    слишком близко от его чудовищных когтей!";
+       ]
+  has male;
+
+! ----------------------------------------------------------------------------
+!  Пират-клептоман!
+! ----------------------------------------------------------------------------
+
+Object pirate
+  with
+       has_stolen_something false,
+       has_been_spotted false,
+
+       daemon
+       [ obj booty_nearby;
+
+          if (random(100) > 2
+              || location==thedark or In_Secret_Canyon
+              || location has light
+              || location has nodwarf) return;
+
+          if (dwarf in location)
+             "^Откуда-то появился бородатый пират, но, заметив гнома,
+              так же быстро пропал.";
+
+          objectloop (obj ofclass Treasure && obj in player or location)
+              booty_nearby = true;
+
+          if (booty_nearby == false)
+          {    if (self.has_been_spotted) return;
+               self.has_been_spotted = true;
+               if (self.has_stolen_something) StopDaemon(self);
+              "^В темноте за Вашей спиной раздался легкий шорох.
+                Резко повернувшись, Вы обнаружили там рослого бородатого пирата,
+                тащащего с собой здоровенный сундук.^^
+                ~Тысяча чертей!~ -- взвыл он. ~Меня обнаружили!
+                Спрячу-ка я свой сундук где-нибудь в глубине лабиринта!~^^
+                Промолвив это, он исчез в темноте.";
+          }
+
+          if (self.has_stolen_something) return;
+          self.has_stolen_something = true;
+          if (self.has_been_spotted) StopDaemon(self);
+
+          objectloop (obj ofclass Treasure && obj in player or location)
+          {   if (obj in player) score = score - 5;
+              move obj to Dead_End_13;
+          }
+
+          "^Откуда-то из теней за Вашей спиной беззвучно появился бородатый пират!
+           ~Ха, ха~ -- хмыкнул он. -- ~А возьму-ка эти ценности,
+           и спрячу у себя сундуке. Там они целее будут!~
+           Он ловко хапнул Вашу добычу, и растворился с нею во мраке.";
+       ];
+
+! ----------------------------------------------------------------------------
+!   Пещера закрывается...
+! ----------------------------------------------------------------------------
+
+Object cave_closer
+  with daemon
+       [; if (treasures_found < MAX_TREASURES) return;
+          StopDaemon(self);
+          caves_closed=1;
+
+          score=score + 25;
+
+          remove CrystalBridge;
+          give Grate locked ~open;
+          remove set_of_keys;
+
+          StopDaemon(dwarf); StopDaemon(pirate);
+          remove Troll; remove Bear; remove Dragon;
+
+          StartTimer(endgame_timer, 25);
+
+          "^Тишину нарушил замогильный голос, отражающийся эхом от стен пещеры:
+           ~ВНИМАНИЕ! Пещера скоро закрывается! Всем искателям приключений --
+           немедленно покинуть ее через главный офис!~";
+       ];
+
+Object endgame_timer
+  with time_left 0,
+       time_out
+       [; score=score + 10;
+
+          while (child(player)~=0) remove child(player);
+
+          move bottle to At_Ne_End;
+          if (child(bottle)~=0) remove child(bottle);
+
+          move giant_bivalve to At_Ne_End;
+          move brass_lantern to At_Ne_End;
+          move black_rod to At_Ne_End;
+          move little_bird to At_Sw_End;
+          move velvet_pillow to At_Sw_End;
+
+         print "^Замогильный голос громко объявил: ~Пещера закрыта!~
+                Когда утихло эхо, последовала вспышка яркого света
+		(в сопровождении клубов оранжевого дыма)...^^
+          Когда у Вас перестала кружиться голова, Вы посмотрели по сторонам...^";
+          PlayerTo(At_Ne_End);
+       ];
+
+! ----------------------------------------------------------------------------
+!   Эндшпиль!
+! ----------------------------------------------------------------------------
+
+Object At_Ne_End "С-В край хранилища"
+  with description
+	"Вы находитесь в северо-восточном конце громадной комнаты
+	 (которая даже больше, чем ~Гигантская комната~).
+	 Похоже, что это -- главное хранилище реквизита для игры ~ПРИКЛЮЧЕНИЕ~.
+	 Высоко над вашей головой в стенах торчат тяжелые факелы, освещающие комнату
+	 чадящим желтым светом. Вокруг можно видеть уйму разбросанных вещей:
+	 груду бутылок (все пустые), целую грядку маленьких зеленых стебельков 
+	 (тихо бормочущих что-то), бассейн с гигантскими устрицами,
+	 связку черных жезлов с ржавыми звездами на концах
+	 и большую кучу латунных ламп. Неподалеку от Вас небольшая банда
+	 гномов спит на полу с шумным храпом. Рядом с ними на стене висит табличка:
+	 ~ГНОМОВ НЕ БЕСПОКОИТЬ!~",
+       sw_to At_Sw_End
+  has  light;
+
+Object -> "гигантск/ое зеркал/о"
+  with name 'огромн' 'гигантск' 'гном' 'больш' 'зеркал',
+       description "Выглядит как обычное зеркало -- но гигантских размеров.",
+       initial "На одной из стен висит огромное зеркало,
+                достигающее противоположного конца комнаты
+                (где с трудом можно разглядеть груды других предметов).",
+       found_in At_Ne_End At_Sw_End,
+       before
+       [;
+          Attack:
+             print "Вы нанесли страшный удар по зеркалу -- и с оглушительным звоном
+                    оно разлетелось на бесчисленное множество осколков!^^";
+             SleepingDwarves.wake_up(); rtrue;
+       ],
+  has  static neuter;
+
+Object "игров/ой реквизит/"
+  with name 'реквизит' 'предмет' 'куч' 'склад' 'барахл',
+       description "Все, что здесь есть, Вам уже приходилось видеть в других местах.",
+       before
+       [; Take:
+       "Подумав о том, что присвоив что-нибудь из реквизита,
+        Вы можете обломать весь кайф другим играющим в ~ПРИКЛЮЧЕНИЕ~,
+        Вы решили ничего не трогать.";
+       ],
+  found_in At_Ne_End At_Sw_End,
+  has  scenery male;
+
+Object -> SleepingDwarves "спящ/ие гном/ы"
+  with name 'спящ' 'храпящ' 'отдыхающ' 'гном',
+       description "На Вашем месте, я бы их не будил.",
+       before
+       [; Take: "Что, прямо всех?"; ],
+       life
+       [; WakeOther:
+              print
+               "Вы пихнули ближайшего к Вам гнома в бок.
+              	Сладко зевнув, он открыл глаза, бросил на Вас беглый взгляд,
+              	выругался, и схватился за свой топор.^^";
+              self.wake_up(); rtrue;
+          Attack: self.wake_up(); rtrue;
+       ],
+       wake_up
+       [;     deadflag=1;
+             "Шум разбудил гномов. Несколько дюжин маленьких злобных гномов --
+              в одной комнате с Вами! Большинство из них метнуло в Вас ножи!
+              Ни один не промахнулся!";
+       ],
+  has  animate scenery multitude pluralname;
+
+Object At_Sw_End "Ю-З край хранилища"
+  with description
+               "Вы находитесь в юго-западном конце громадного хранилища.
+                С одной стороны от Вас огромный колодец, полный свирепых зеленых змей.
+                С другой стороны -- длинный ряд плетеных клеток, в каждой из которых
+                сидит по маленькой грустной птичке. В одном из углов лежит связка
+                черных жезлов со ржавыми звездами на концах. По полу разбросано
+                множество бархатных подушек. Огромное зеркало продолжается
+                на северо-восток. У Ваших ног находится большая стальная решетка
+                с табличкой: ~СОКРОВИЩНИЦА. Ключи в главном офисе.~",
+       d_to RepositoryGrate,
+       ne_to At_Ne_End
+  has  light;
+
+Object -> RepositoryGrate "стальн/ая решетк/а"
+  with name 'стальн' 'решетк',
+       description "Решетка, сделанная из стали.",
+       when_open "Решетка открыта.",
+       when_closed "Решетка закрыта.",
+       door_dir d_to, door_to Outside_Grate, with_key 0
+  has  static door locked openable female;
+
+Object -> black_mark_rod "черн/ый жезл/ со ржавой звездой на конце"
+  with name 'черн' 'трехфутов' 'железн' 'ржав' 'жезл',
+       description "Трехфутовый черный жезл с ржавой звездой на конце.",
+       initial  "Трехфутовый черный жезл с ржавой звездой на конце лежит рядом.",
+       before [; Wave: "Ничего не случилось."; ]
+  has male;
+
+! ----------------------------------------------------------------------------
+!   Основные подпрограммы и точки входа
+! ----------------------------------------------------------------------------
+
+[ Initialise;
+
+  location=At_End_Of_Road; score = 36;
+
+  StartDaemon(dwarf);
+  StartDaemon(pirate);
+  StartDaemon(cave_closer);
+
+  print "^^Приключение начинается!^^";
+
+];
+
+[ PrintRank;
+  print ", что дает Вам квалификацию ";
+  if (score >= 348)	"гроссмейстера приключений!";
+  if (score >= 330)	"мастера приключений первого класса.";
+  if (score >= 300)	"мастера приключений второго класса.";
+  if (score >= 200)	"мастера-юниора приключений.";
+  if (score >= 130)	"профессионального спелеолога.";
+  if (score >= 100)	"опытного спелеолога.";
+  if (score >= 35)	"продвинутого искателя приключений.";
+  if (score >= 10)	"начинающего искателя приключений.";
+  "случайного прохожего.";
+];
+
+[ DarkToDark;
+  if (dark_warning == false)
+  {   dark_warning = true;
+      "Здесь кромешная тьма. 
+       Если Вы пойдете дальше, можете свалиться в глубокую яму!";
+  }
+  if (random(4) == 1)
+  {   deadflag = 1;
+      "Вы свалились в яму и переломали себе все кости!";
+  }
+  rfalse;
+];
+
+[ Amusing;
+  HelpSub ();
+];
+
+! ----------------------------------------------------------------------------
+!   Новые действия, в дополнение к библиотечным
+! ----------------------------------------------------------------------------
+
+[ CatchSub;
+  "Вы не можете поймать ", (cAcc) noun, ".";
+];
+
+[ ReleaseSub;
+  "Вы не можете отпустить ", (cAcc) noun, ".";
+];
+
+[ WaterSub;
+  if (bottle in player) <<Empty bottle>>;
+  "О какой воде идет речь?";
+];
+
+[ OilSub;
+  if (bottle in player) <<Empty bottle>>;
+  "О каком масле идет речь?";
+];
+
+[ XyzzySub; "Ничего не случилось."; ];
+[ PlughSub; "Ничего не случилось."; ];
+[ PloverSub; "Ничего не случилось."; ];
+
+[ FeeSub; FthingSub(0); ];
+[ FieSub; FthingSub(1); ];
+[ FoeSub; FthingSub(2); ];
+[ FooSub; FthingSub(3); ];
+
+[ FthingSub i;
+
+  if (feefie_count~=i) { feefie_count=0; "Неправильно! Пробуем еще раз..."; }
+
+  if (feefie_count++ == 3)
+  {   feefie_count=0;
+      if (golden_eggs in In_Giant_Room) "Ничего не случилось.";
+      if ((golden_eggs in player) || (golden_eggs in location))
+          print "Гнездо с золотыми яйцами бесследно исчезло!^";
+      else print "Сделано!";
+      if (golden_eggs in player) score=score-5;
+      if (golden_eggs in Inside_Building)
+          score=score-golden_eggs.depositpoints;
+      move golden_eggs to In_Giant_Room;
+      if (location==In_Giant_Room)
+        "^^Огромное гнездо, полное золотых яиц, появилось из ниоткуда!";
+  }
+  else "Хорошо.";
+];
+
+[ CountSub;
+    if (noun has multitude) "Их слишком много!";
+    "Только ",
+    (string) IIF (noun has neuter, "одно", IIF (noun has female, "одна", "один")),
+    " (1).";
+];
+
+[ BlastWithSub;
+     if (second~=black_mark_rod) "Вообще-то для взрыва необходима взрывчатка!";
+     "Советую быть поосторожнее!";
+];
+
+[ OldMagicSub; "Эти древние заклинания здесь явно не действуют."; ];
+
+[ KickSub; <<Attack noun>>; ];		! (чтобы пинать гномов :)
+
+[ BlastSub;
+  if (location~=At_Sw_End or At_Ne_End) "Обидно, да?";
+  if (location==At_Sw_End && parent(black_mark_rod)==At_Ne_End)
+  {   score=score+35;
+      deadflag=2;
+      "Чудовищный взрыв проделал в дальней стене двадцатифутовое отверстие
+       (заодно похоронив спящих гномов под грудой камней).
+       Вы вошли в него -- и оказались в главном офисе!
+       Здесь Вас встретила ликующая толпа эльфов, которые подняли Вас на руки 
+       и торжественно вынесли наружу навстречу пламенеющему закату...";
+  }
+  if (location==At_Ne_End && parent(black_mark_rod)==At_Sw_End)
+  {   score=score+20;
+      deadflag=1;
+      "Чудовищный взрыв проделал в дальней стене двадцатифутовое отверстие
+       (заодно похоронив колодец со змеями под грудой камней).
+       В него хлынул поток горячей лавы, испепеливший все на своем пути,
+       включая Вашу персону!";
+  }
+  deadflag=1;
+  "Чудовищный взрыв размазал Вас по стенам комнаты очень тонким слоем.";
+];
+
+! ----------------------------------------------------------------------------
+!   Воскрешение
+! ----------------------------------------------------------------------------
+
+[ AfterLife o;
+  if (deadflag==3) { deadflag=1; rfalse; }
+  print "^^";
+  if (caves_closed) 
+      "Похоже, что Вы умерли. А пещера, увы, скоро закрывается.
+       Так что, останавливаемся на достигнутом...";
+
+  if (deaths==0)
+    print "Бедняга! Умудрились себя угробить...
+           Я могу Вам помочь, но предупреждаю: раньше я никогда этого не делал.
+           Итак: попробовать вернуть Вас к жизни?^^";
+
+  if (deaths==1)
+    print "Это ж надо -- опять угробились!
+    	   Предупреждаю прямо -- я не знаю, долго ли еще смогу вытаскивать Вас оттуда.
+    	   Ну что, опять вернуть Вас к жизни?^^";
+
+  if (deaths==2)
+    print "Нет, Вы меня достали! Мои запасы оранжевого дыма на исходе! 
+           А воскрешение без оранжевого дыма -- это же просто курам на смех!
+       	   Верно?^^";
+
+  print "> ";
+  if (YesOrNo() == false)
+  {   switch(deaths)
+      {   0: "Ну, ладно...";
+          1: "Разумное решение.";
+          2: "И не сомневался в этом!";
+      }
+  }
+
+  switch(deaths)
+  {   0: print "Ну хорошо. Только без претензий, если что-нибудь вдруг не полу...^^^^
+             --- ФФ-ФФФФ!! ---^^
+             Вас окутало облако густого оранжевого дыма.
+             Задыхаясь и кашляя, Вы выбрались из него, и обнаружили, что Вы находитесь...^";
+      1: print "Ладно, ладно. Ну, где там мой оранжевый дым?... >ФФФФ!<
+             ^^Все вокруг вновь исчезло в облаках оранжевого дыма.^";
+      2: "Ладно, но если Вы такой умный, позаботьтесь о себе сами! Я умываю руки!";
+  }
+
+  deaths++; score=score-10;
+
+  if (location~=thedark)
+  {   while (child(player) ~= nothing)
+      {   o=child(player);
+          move o to location;
+          if (o ofclass Treasure) score=score-5;
+      }
+  }
+  else
+  {   while (child(player) ~= nothing) move child(player) to real_location;
+  }
+
+  move brass_lantern to At_End_Of_Road; give brass_lantern ~on ~light;
+  remove dwarf;
+  deadflag=0;
+  PlayerTo(Inside_Building);
+];
+
+! ----------------------------------------------------------------------------
+!   Система помощи
+! ----------------------------------------------------------------------------
+
+[ HelpMenu;
+
+  switch (menu_item) {
+  0:    item_width=8; item_name="Помощь";
+        if (deadflag==2) return 4; else return 3;
+
+  1:	item_width=6; item_name="Инструкции к игре";
+  2:	item_width=4; item_name="Экскурс в историю";
+  3:	item_width=6; item_name="Еще об этой версии";
+  4:	item_width=7; item_name="А известно ли Вам, что...";
+  }
+
+];
+
+[ HelpInfo;
+ if (menu_item==1) {
+
+ print "(Это -- краткий перевод оригинальной инструкции,
+	относящейся к игре Adventure. Информ-версия игры
+	отличается в отдельных моментах, особенно в том,
+	что касается списка и синтаксиса команд.
+	Более подробно особенности системы ~Русский Информ~
+	описаны в файле ~infrus.htm~.)";
+
+ print "Игре ~ПРИКЛЮЧЕНИЕ~ известны многие места, предметы и действия.
+ 	Она управляется командами -- простыми повелительными предложениями,
+ 	обычно имеющими вид ~Действие-глагол Объект-существительное~
+ 	(но иногда и более сложный).
+ 	Имя объекта может дополняться определениями-прилагательными,
+ 	особенно в тех случаях, когда это необходимо,
+ 	чтобы выбрать определенный объект из нескольких,
+ 	имеющих сходные имена. Отдельные действия допускают несколько объектов --
+ 	в этом случае их список должен разделяться запятыми, или же союзами ~и~.
+ 	Для некоторых действий достаточно команды, состоящие только из глагола.^^";
+
+ print "Многие глаголы допускают сокращения (допустимо ~инв~ вместо ~инвентарь~,
+	~см предмет~ вместо ~смотри предмет~, ~вз предмет~ вместо ~взять предмет~
+	и т.п.) Для передвижения в заданных направлениях достаточно ввести
+	~восток~ (~в~), ~запад~ (~з~), ~север~ (~с~), ~юг~ (~ю~),
+	~вверх~ (~вв~) или ~вниз~ (~вн~). Некоторые фразы требуют наличия предлогов --
+	например, ~войди в чулан~ или ~ищи под деревом~.
+	Обычно имя предмета должно быть в том падеже,
+	который требуют правила русского языка.^^";
+
+ print "Есть некоторые специальные предметы, такие, как черный жезл,
+ 	который можно найти в пещере. Они могут иметь побочные эффекты --
+ 	например, жезл отпугивает маленькую птичку. Отдельные предметы
+ 	используются более чем единственным способом.^^";
+
+ print "Учтите, что пещерные проходы извилисты и часто меняют направление --
+	поэтому, выйдя из комнаты на север, Вы не всегда войдете в следующую
+	с юга.^^";
+
+ print "Если вы хотите выйти из игры, введите команду ~конец~. 
+        Чтобы сохранить игру, введите ~сохр~; чтобы восстановить сохраненное,
+        введите ~восст~ или ~загр~. Чтобы взглянуть, насколько успешно
+        продвигаются Ваши дела, введите ~счет~.^
+        Чтобы получить полный набор очков за найденное сокровище,
+        необходимо доставить его в кирпичный дом, где началась игра,
+        и положить там. В момент, когда оно найдено, дается лишь частичный кредит.
+        Если Вы погибнете, часть очков будет потеряна.
+        За первое посещение некоторых мест в Пещере также даются очки.^^";
+
+ print "Если Вам кажется, что Вы уже нашли все клады, поисследуйте Пещеру
+	еще немного. Если не произойдет ничего интересного -- значит, Вы просто
+	пока нашли не все. Маленькая подсказка -- если Вы действительно найдете
+	ВСЕ сокровища, Вы сможете попасть в финальную часть игры, что даст Вам
+	возможность набрать очки по максимуму!^^";
+
+        "Удачи Вам!^";
+ }
+
+ if (menu_item==2) {
+
+ print "Можно считать, что первым ~искателем приключений~ в истории был
+	раб-мулат по имени Стивен Бишоп: 'смелый, ловкий и полный энтузиазма'
+	исследователь Мамонтовой Пещеры в Кентуккийском карстовом комплексе.
+	История этой пещеры -- это своеобразный слепок с истории Америки.
+	Об ее открытии рассказывают легенды, восходящие к 1790-м годам --
+	утверждают, что именно тогда охотник Джон Хоучин,
+	преследуя раненного медведя до долины Зеленой Реки,
+	внезапно обнаружил там вход в большую пещеру.^^";
+
+ print "У входа в изобилии водились летучие мыши, и ко временам войны 1812 года
+	там интенсивно шла добыча гуано, из которого извлекалась селитра для
+	ружейного пороха. После войны цены на нее упали, но Пещера уже стала
+	местной достопримечательностью -- особенно после того, как там обнаружили
+	высохшую мумию индейского вождя, сидящего в каменном гробу
+	в окружении магических талисманов. В 1815 году она путешествовала
+	вместе с бродячим цирком, собирая толпы зевак по всей Америке.
+	В конце концов, мумия оказалась в Смитсоновском институте,
+	но Пещера к этому моменту уже приобрела репутацию одного из чудес света --
+	во многом благодаря ее ~посмертным усилиям~.^^";
+
+ print "Невзирая на это, к началу девятнадцатого века немногие всерьез исследовали
+	Мамонтову Пещеру (хотя многие пещеры Европы уже давно были излюбленными
+	местами туристов). Кстати, Пещера была названа так не из-за своих размеров,
+	а в память о воистину ~мамонтовых~ объемах гуано, добытых там когда-то.
+	В 1838 году Пещеру приобрел хозяин Стивена Бишопа. Стивен, бывший по
+	любым стандартам очень незаурядной личностью (латынь и греческий он
+	выучил самостоятельно) быстро приобрел репутацию 'верховного властителя'
+	этого подземного царства. В свободное время он изучил значительную
+	часть Пещеры, увеличив уже существовавшую карту практически вдвое.
+	Именно с него берут начало названия -- как ~классические~,
+	так и ~доморощенно-американские~ -- многих мест Пещеры:
+	~Река Стикс~, ~Комната Снежков~, ~Авеню Летучих Мышей~,
+	~Гигантский Купол~.
+	Стивен обнаружил странных слепых рыб, змей, беззвучных сверчков,
+	останки пещерных медведей (вымерших еще в конце последнего ледникового
+	периода), гипсовые изделия индейцев многовековой древности, и еще много
+	интересного. Его карта -- нарисованная исключительно по памяти около
+	1842 года -- продолжала оставаться полезной даже сорок лет спустя.^^";
+
+ print "В качестве приманки для туристов и, на короткий срок, санатория
+	для туберкулезных больных (обязанного своим возникновением некой
+	шарлатанской медицинской теории) Пещера стала предметом большого бизнеса
+	и интенсивной конкуренции. В 1912 году неподалеку, в горах Флинт-Риджа,
+	открылась Большая Ониксовая Пещера. К 1920-м годам ~кентуккийские
+	пещерные войны~ уже были в полном разгаре: конкурирующие владельцы
+	отпугивали туристов фиктивными полицейскими, срывали экскурсии
+	своих соперников с помощью наемных провокаторов, поджигали
+	билетные киоски и состязались в крикливых рекламных заявлениях.
+	В результате изучение пещер стало настолько рискованным делом,
+	что в 1941 году	пришлось вмешаться федеральному правительству,
+	объявившему район пещер Национальным парком и запретившему их исследование.
+	Впрочем, золотоносный поток туристов и без этого шел на убыль.^^";
+
+ print "Ранее часто выдвигалось предположение, что Мамонтова Пещера и Флинт-Ридж
+	являются частями единого огромного комплекса пещер. Многие исследователи
+	годами пытались найти путь между ними. Но все проходы,
+	найденные в 1960-х годах -- труднопроходимые затопленные тоннели --
+	кончались глухими завалами. И только в 1972 году Патрисия Краутер
+	(по основной профессии физик) добилась прорыва в исследованиях,
+	пробравшись через Узкий Лаз в заполненный грязью узкий проход,
+	оказавшийся долгожданным путем в Мамонтову Пещеру.^^";
+
+ print "В соответствии с завещанием своего хозяина, Стивен Бишоп был освобожден
+	в 1856 году. К этому времени исследованная часть Пещеры насчитывала
+	226 ~авеню~, 47 куполов, 23 колодца и 8 водопадов.
+	Через год после освобождения Стивен умер, так и не дождавшись возможности
+	освободить собственную жену и сына. В 1970-х годах на его карте был
+	обнаружен и ~проход Краутер~!^^";
+
+ print "Мамонтова Пещера очень велика, о ее полных размерах спорят до сих пор
+	(оценки варьируются от 300 до 500 миль). Игра, по сути,
+	представляет собой симулятор одной из областей Пещеры -- Bedquilt
+	(~Лоскутное одеяло~). Подробнее об ее создании рассказывает
+	сам Уилл Краутер:^^";
+
+ print "~В то время я принимал участие в (некомпьютерной) ролевой игре
+	типа ~Dungeons and Dragons~, и одновременно активно занимался
+        изучением пещер -- прежде всего, Мамонтовой Пещеры в Кентукки.
+        Развод с женой дался мне нелегко, особенно мне не хватало моих детей.
+        Мне стало не до странствий по пещерам, и, чтобы немного развеяться,
+        я решил написать в память о них программу, которая могла бы
+        стать игрой для детей -- и, одновременно, содержала бы отдельные моменты
+        из ~Dungeons and Dragons~.^^";
+
+ print "~Моя идея состояла в том, что это должна быть компьютерная программа,
+	не вызывающая аллергии даже у самых далеких от компьютеров людей,
+	и это была одна	из причин для того, чтобы игрок мог давать команды
+	на почти естественном языке, вместо какого-нибудь более формализованного.
+	Мои дети получили бездну удовольствия.~
+	[Цитируется по книге: ~Genesis II: Creation and Recreation with Computers~,
+	 Dale Peterson (1983).]^^";
+
+ print "Первая, оригинальная, программа Краутера (написанная на Фортране)
+	содержала всего пять кладов (или около того), и не подсчитывала очки.
+	Задача игрока ограничивалась изучением пещеры, хотя уже имелись
+	и некоторые препятствия -- например, змея. Подобно настоящему
+	~Лоскутному одеялу~, симулятор Краутера имел четыре уровня в глубину,
+	и был богат реалистичными геологическими деталями. К примеру,
+	у ~комнаты с оранжевой колонной~ (в которой можно встретить птичку)
+	имеется реальный прототип. (Настоящая колонна состоит из оранжевого
+	травертина -- красивого минерала, встречающегося
+	во влажных известняковых пещерах).^^";
+
+ print "В языке игры также встречается немало терминов из профессионального жаргона
+	спелеологов, вроде упоминания 'куполов' ('domes') и 'лазов' ('crawls').
+	К примеру, комната с 'каменной плитой' -- это очень старая пещера,
+	потолок которой давно начал осыпаться, усеивая пол кучей
+	маленьких острых осколков. Даже использование программой
+	слова 'комната' ('room') в качестве общего обозначения мест в игре
+	(выглядящее неряшливо в литературном языке) широко распространено
+	в практике американских спелеологов, и также восходит
+	к Стивену Бишопу. Так что вполне вероятно, что обычное
+	для приключенческих игр использование слова 'комната'
+	для обозначения локаций также унаследовано от него.^^";
+
+ print "Игра начала превращаться в набор головоломок, когда Дон Вудз,
+	в то время студент в Стэнфорде, занялся ее отладкой и расширением.
+	Он утроил количество головоломок, и добавил места, не имеющие
+	отношения к геологии -- вроде моста с троллем и комнат в окрестностях
+	~Лоскутного одеяла~. Большинство имитаций и расширений игры так или иначе
+	базируются на 350-очковой версии Вудза. (Много расширенных или
+	раздутых -- смотря как это называть -- версий игры до сих пор
+	циркулируют в Интернете, и различать их проще всего по лимиту
+	достигнутых очков. Большинство версий колеблются от 400 до 500 очков,
+	одна из них достигает тысячи. Сам Вудз также продолжает выпускать
+	новые версии своей игры.)^^";
+
+ print "Несмотря на то, что игра отошла от ~чистой~ симуляции, в ней сохранилось
+	немало реализма. Спелеологам приходилось возвращаться назад, когда их
+	карбидные лампы начинали затухать; в Пещере действительно имеются
+	загадочные отметки и инициалы на стенах (оставленные частично Стивеном
+	Бишопом, частично исследователями 1920-х годов). Разумеется, в настоящей
+	Пещере нет действующего вулкана, равно как нет драконов и гномов.
+	Но даже эти приукрашения основаны на литературной традиции:
+	как и большинство ролевых игр, ПРИКЛЮЧЕНИЕ многим обязано
+	Дж.Р.Р. Толкину -- 'Хоббиту' и путешествию сквозь Морию
+	из 'Властелина Колец'.^^";
+
+ print "К 1977 магнитные ленты с копиями ADVENTURE распространялись широко,
+	в основном при участии группы пользователей DECUS, отнимая у людей
+	перерывы на ленч и выходные... но это уже другая история.^^";
+
+ print "Это третий (или даже четвертый) по счету римейк игры -- от оригинала
+	Краутера, через 350-очковую версию Вудза и PC-версию Дональда Экмана,
+	а затем TADS-версию Дэвида Бэджетта (1993), завершая этой.^^";
+
+ print "Наконец, русская версия игры (вместе с русской версией системы ~Информ~)
+	создана Денисом Гаевым в 2003--2004 годах.^";
+
+ }
+
+ if (menu_item==3) {
+
+ print "Эта версия довольно близка к оригиналу: все места, вещи и загадки
+ 	из оригинальной (350 очков) версии Вудза сохранены в неприкосновенности.^^";
+
+ print "Я добавил несколько полезных сообщений (вроде ~Это тупик~)
+        в нужных местах, и восстановил начальные (initial) сообщения
+        (из ранних исходников темного происхождения) для тех объектов
+        (вроде ~вкусной еды~), для которых они выглядят осмысленными.^^";
+
+ print "Система начисления очков не отличается от оригинала, исключая то,
+	что Вы не теряете 4 очка при выходе из игры (что все равно не существенно,
+	поскольку при выходе из Информ-игры результат обычно не выдается).
+	Но зато я добавил 5 очков за клад, находящийся у Вас в руках
+	(как в некоторых версиях игры 1980-х годов). Система присваиваемых званий
+	тоже слегка упорядочена. Единственное серьезное изменение правил состоит
+	в том, что невозможно использовать какие-либо магические слова до первого
+	визита в то место, где Вам их сообщают.^^";
+
+ print "Передвижения гномов проще, чем в оригинале. С другой стороны,
+	я добавил несколько сообщений, благодаря которым они лучше
+	взаимодействуют с остальной игрой. Вероятности всех событий также
+	взяты из оригинала.^^";
+
+ print "В оригинале есть возможность перемещаться по Пещере,
+	называя комнаты по именам. Ради простоты и небольшого размера
+	кода я решил (хотя и не без сожалений) ее не реализовывать.^^";
+
+ print "Текст игры оставлен без изменения. Я исправил мелкие орфографические
+	и пунктуационные ошибки (и изменил некоторые явно дезинформирующие
+	сообщения). По очевидным причинам, инструкции к игре пришлось переписать
+	(но и в них осталось кое-что от оригинала).^^";
+
+ print "Хороший дополнительный источник информации -- исходные тексты
+        Дэвида Бэджетта, широко доступные в Сети.^^";
+
+        "Больше информации о русской версии игры можно получить из сопровождающей
+         документации (см ~readme.htm~)^";
+ }
+
+ if (menu_item==4) {
+
+ print "А знаете ли Вы, ЧТО...^^";
+
+ print "Пятерка гномов с 96% вероятностью будет преследовать Вас по пятам
+	(но не в светлые места, не в глубокие колодцы и не тогда,
+	когда они любуются собой в зеркале),
+        а их маленькие острые ножи имеют 9.5% вероятность попадания.^^";
+
+ print "Дракон сжигает гномов дотла
+	(может быть потому, что гномы питаются только углем?)^^";
+
+ print "Пещерный медведь любит вулкан и слишком тяжел для хрупкого моста
+        (и Вы можете вернуться к месту его гибели после воскрешения).^^";
+
+ print "В секретный В-З каньон с 35% вероятностью можно прокрасться мимо змеи.
+	И даже путешествия в кромешной темноте не столь рискованны:
+	существует только 25% риска свалиться в яму и погибнуть.^^";
+
+ print "С древней китайской вазой надо обращаться исключительно осторожно!^^";
+
+ print "Туманные фигуры могут махать руками друг другу.^^";
+
+ print "Если полить водой смазанные дверные петли, они заржавеют вновь.^^";
+
+ print "При ~закрытии~ Пещеры решетка запирается и ключи от нее выбрасываются,
+        все активные персонажи убираются восвояси,
+        а хрустальный мост бесследно исчезает...^^";
+
+ print "...и совершенно бесполезную подсказку можно прочитать на раковине
+	гигантской устрицы в самом конце игры.^^";
+
+       "А чтобы заработать последнее проклятое очко надо... ну нет, не скажу.
+        Так будет слишком просто!";
+ }
+
+];
+
+[ HelpSub;
+
+ if (deadflag~=2)
+ DoMenu("Имеется такая информация:^
+         ^     Инструкции к игре
+         ^     Небольшой экскурс в историю игры
+         ^     Насколько аутентична эта версия?^",
+         HelpMenu, HelpInfo);
+ else
+ DoMenu("Имеется такая информация:^
+         ^     Инструкции к игре
+         ^     Небольшой экскурс в историю игры
+         ^     Насколько аутентична эта версия?^
+         ^     А известно ли Вам, что...^",
+         HelpMenu, HelpInfo);
+
+];
+
+! ----------------------------------------------------------------------------
+!   Грамматика: расширения стандартной системы
+! ----------------------------------------------------------------------------
+
+Include "RussiaG";
+
+! "поймать"/"ловить"
+Verb 'пойм' 'лов'
+                * cAcc_creat			-> Catch
+                * cAcc_creat cIns_held		-> Catch
+                * cIns_held cAcc_creat		-> Catch reverse;
+
+Object "поймать" VerbDepot
+	with name 'пойм' 'лов';
+
+! "отпустить"/"освободить"
+Verb 'отпуст' 'отпуск' 'освобод'
+                * cAcc_creat			-> Release;
+
+Object "отпустить" VerbDepot
+	with name 'отпуст' 'отпуск' 'освобод';
+
+! "полить"
+Verb 'пол'
+                * 'водой' cAcc_noun		-> Water
+                * cAcc_noun 'водой'		-> Water
+
+                * 'маслом' cAcc_noun		-> Oil
+                * cAcc_noun 'маслом'		-> Oil
+
+                * cAcc_noun			-> Empty;
+
+Object "полить" VerbDepot
+	with name 'пол';
+
+! "орошить"
+Verb 'орош'	*				-> Water;
+
+! "омаслить"
+Verb 'омасл'	*				-> Oil;
+
+Object "орошить" VerbDepot
+	with name 'орош';
+
+Object "омаслить" VerbDepot
+	with name 'омасл';
+
+! "пнуть"
+Verb 'пин' 'пн'
+	        * cAcc_noun			-> Kick;
+
+Object "пнуть" VerbDepot
+	with name 'пин' 'пн';
+
+! "считать"
+Verb 'счит'
+	        * cAcc_noun			-> Count;
+
+Object "считать" VerbDepot
+	with name 'счит';
+
+! "взорвать"
+Verb 'взорв' 'взрыв'
+                *				-> Blast
+                * cAcc_noun cIns_held		-> BlastWith
+                * cIns_held cAcc_noun		-> BlastWith reverse;
+
+Object "взорвать" VerbDepot
+	with name 'взорв' 'взрыв';
+
+! (действующая магия)
+Verb 'plugh'    *				-> Plugh;
+Verb 'xyzzy'    *				-> Xyzzy;
+Verb 'plover'   *				-> Plover;
+Verb 'fee'      *				-> Fee;
+Verb 'fie'      *				-> Fie;
+Verb 'foe'      *				-> Foe;
+Verb 'foo'      *				-> Foo;
+
+! (морально устаревшая магия)
+Verb 'сезам!'
+     'фокус!' 'покус!' 'абракадабра!'
+                *				-> OldMagic;
+
+! (помощь)
+Verb 'помощь!'	*				-> Help;
+
+! ----------------------------------------------------------------------------
+!   Тестовый режим:
+!   нет гномов и пиратов; сразу работают все волшебные слова
+! ----------------------------------------------------------------------------
+
+#IFDEF TEST_VERSION;
+
+[ XdetermSub;
+
+  StopDaemon(dwarf);
+  StopDaemon(pirate);
+
+  give In_Debris_Room visited;
+  give At_Y2 visited;
+  give In_Plover_Room visited;
+
+  print "Тестовый режим включен!^"
+];
+
+Verb 'тест!'  *                                -> Xdeterm;
+
+#ENDIF;
+
+! ----------------------------------------------------------------------------
+
