@@ -12,7 +12,7 @@
 System_file;
 
 Constant Tlimit = 31;     ! (не больше)
-Array  Tbuffer --> TLimit;
+Array  Tbuffer --> 3+TLimit;
 Array  Tparse --> Tlimit;
 
 ! DL: слегка модифицированная версия для DictionaryLookup
