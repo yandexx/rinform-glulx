@@ -47,9 +47,9 @@ Constant MAX_SCORE = 30;       ! Определено в DM4 §22
 Include "Parser";
 Include "VerbLib";
 
-! Constant CANTGO_SHOWROOMS;
-!Constant CANTGO_EXITS;
-!Include "SmartCantGo";
+Constant CANTGO_SHOWROOMS;
+Constant CANTGO_EXITS;
+Include "SmartCantGo";
 
 ! ---------------------------------------------------------------------------- !
 !       TREASURE: базовый класс для всех сокровищ

@@ -34,9 +34,9 @@ Constant AMUSING_PROVIDED;
 Include "Parser";
 Include "VerbLib";
 
-!Constant CANTGO_SHOWROOMS;
-!Constant CANTGO_EXITS;
-!Include "SmartCantGo";
+Constant CANTGO_SHOWROOMS;
+Constant CANTGO_EXITS;
+Include "SmartCantGo";
 
 Attribute nodwarf;
 Attribute treasure_found;
