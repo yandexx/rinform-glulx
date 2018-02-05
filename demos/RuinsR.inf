@@ -1029,22 +1029,30 @@ Object  tiny_claws "звук/ крошечных когтей" thedark
 
 !       Определено в DM4 Упр. 123
 [ TitlePage i;
-        @erase_window -1; print "^^^^^^^^^^^^^";
-        i = 0->33; if (i > 30) i = (i-30)/2;
-        style bold; font off; spaces(i);
+        i = 15;
+        style bold; font off;
+        print "^^^^^^^^^^^^^^^";
+        spaces(i);
         print " СРЕДИ РУИН^";
-        style roman; print "^^"; spaces(i);
+        print "^^";
+        spaces(i);
+        print "Но Аллигатор не выроет нору^";
+        spaces(i);
+        print "Что станет могилой ему,^";
+        spaces(i);
+        print "Но выроет он нору^";
+        spaces(i);
+        print "Как убежище себе.^";
+        spaces(i);
+        print "^";
+        spaces(i);
+        print "-- из ~Пополь Вух~^^^^^";
         print "[Нажмите на пробел.]^";
+        style roman;
         font on;
-!        box "Но Аллигатор не выроет нору"
-!            "Что станет могилой ему,"
-!            "Но выроет он нору
-!            "Как убежище себе."
-!            ""
-!            "-- из ~Пополь Вух~";
-        @read_char 1 -> i;
-        @erase_window -1;
-        ];
+        KeyCharPrimitive();
+        ClearScreen();
+];
 
 !       Определено в DM4 §22
 [ PrintRank;
