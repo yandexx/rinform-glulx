@@ -31,7 +31,7 @@ Verb meta 'q!' 'конец!' 'конец'
                 *				-> Quit;
 
 Verb meta 'восст!' 'вос' 'восстан' 'восстанов'
-	  'загр!' 'загр' 'загруз' 'загруж'
+	  'загр!' 'загр' 'загрузить' 'загруж'
 	  'restore'
                 *				-> Restore;
 
@@ -48,10 +48,12 @@ Verb meta 'нач' 'заново'
 	  'перезапуст' 'рестарт'
                 *				-> Restart;
 
-Verb meta 'скрипт!' 'транскрипт!'
+Verb meta 'скрипт!' 'транскрипт!' 'отчет!'
                 *         -> ScriptOn
                 * 'вкл'   -> ScriptOn
                 * 'выкл'  -> ScriptOff;
+
+Verb meta 'остотчет!' * -> ScriptOff;
 
 ! Запись команд
 
@@ -758,12 +760,11 @@ Object "молить" VerbDepot
 	with name 'мол';
 
 ! "целовать"/"обнимать"
-Verb	'целов' 'цел'
-	'обним'
+Verb 'целов' 'целуй' 'обнять' 'обним' 
                 * cAcc_creat			-> Kiss;
 
 Object "целовать" VerbDepot
-	with name 'целов' 'цел'	'обним';
+    with name 'целов' 'целуй' 'обнять' 'обним';
 
 ! "[за]думать[ся]"/"мыслить"
 Verb	'дум'
@@ -775,8 +776,8 @@ Object "думать" VerbDepot
 
 ! "нюхать"/"нюхнуть"
 Verb	'нюх'
-               *				-> Smell
-               * cAcc_noun			-> Smell;
+                *				-> Smell
+                * cAcc_noun			-> Smell;
 
 Object "нюхать" VerbDepot
 	with name 'нюх';
