@@ -1144,15 +1144,24 @@ Constant NOARTICLE_BIT  4096;       ! Print no articles, definite or not
     L__M(##Verify, 2);
 ];
 
-[ ScriptOnSub;
+[ ScriptOnSub
+  has_unicode;
     if (gg_scriptstr ~= 0) return L__M(##ScriptOn, 1);
     if (gg_scriptfref == 0) {
         ! fileref_create_by_prompt
         gg_scriptfref = glk($0062, $102, $05, GG_SCRIPTFREF_ROCK);
         if (gg_scriptfref == 0) jump S1Failed;
     }
-    ! stream_open_file
-    gg_scriptstr = glk($0042, gg_scriptfref, $05, GG_SCRIPTSTR_ROCK);
+
+    @gestalt 5 0 has_unicode;
+    if (has_unicode == 0) {
+        ! stream_open_file
+        gg_scriptstr = glk($0042, gg_scriptfref, $05, GG_SCRIPTSTR_ROCK);
+    } else {
+        ! stream_open_file_uni
+        gg_scriptstr = glk($0138, gg_scriptfref, $05, GG_SCRIPTSTR_ROCK);
+    }
+
     if (gg_scriptstr == 0) jump S1Failed;
     glk($002D, gg_mainwin, gg_scriptstr); ! window_set_echo_stream
     L__M(##ScriptOn, 2);
