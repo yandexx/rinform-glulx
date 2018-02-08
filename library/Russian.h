@@ -1,9 +1,9 @@
 ! ===========================================================================
 !
 !   RUSSIAN: Language Definition File for Inform 6
-!   Source encoding: CP1251
 !
 !   Copyright (C) Grankin Andrey 2002, Gayev Denis 2003-2004
+!                 Vsevolod Zubarev 2010-2018
 !
 !   Based on:
 !	English Release 6/11 Serial number 040227
@@ -16,7 +16,7 @@ System_file;
 !   Часть I.   Введение
 ! ---------------------------------------------------------------------------
 
-Constant LanguageVersion = "@<<Информ@>>: Русская версия Glulx 0.8.2, 2018-02-03";
+Constant LanguageVersion = "@<<Информ@>>: Русская версия Glulx v0.8.3 (alpha), 2018-02-08";
 
 !
 ! Unluckily, there is no conditional operator in Inform.
