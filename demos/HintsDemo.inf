@@ -1,0 +1,64 @@
+!%
+!=============================================================================
+
+Constant Story "Меню подсказок";
+Constant Headline
+    "^Демо-игра с меню с подсказками.^";
+
+Include "Parser";
+
+Include "VerbLib";
+Include "HelpRoutines";
+
+[ Initialise;
+    location = test_room;
+];
+
+Object test_room "Демонстрационная комната"
+    with description "Введите «справка», чтобы увидеть меню.",
+    has light;
+
+Include "RussiaG";
+
+Verb 'справка' * -> Help;
+
+[ HelpSub; 
+    DoMenu("Если вы играете в Интерактивную Литературу впервые:^
+        ^     Введение
+        ^     Что это «>» такое?
+        ^     Начальные инструкции
+        ^     Если вы застряли
+        ^     Стандартные глаголы
+        ^     Аббревиатуры
+        ^     Общение
+        ^     Ресурсы в интернете^",
+        HelpMenu, HelpInfo);
+];
+
+[ HelpMenu;
+  switch (menu_item) {
+      0:    item_width=25; item_name="Если вы играете в Интерактивную Литературу впервые";
+            return 8; ! в меню восемь пунктов
+      1:    item_width=4; item_name="Введение";
+      2:    item_width=9; item_name="Что это «>» такое?";
+      3:    item_width=10; item_name="Начальные инструкции";
+      4:    item_width=8; item_name="Если вы застряли";
+      5:    item_width=9; item_name="Стандартные глаголы";
+      6:    item_width=6; item_name="Аббревиатуры";
+      7:    item_width=3; item_name="Общение";
+      8:    item_width=9; item_name="Ресурсы в интернете";
+  }
+];
+
+[ HelpInfo;
+    switch (menu_item) { 
+        1: LongIntro();
+        2: ExplainPrompt();
+        3: StartingInstructions();
+        4: StuckInstructions();
+        5: StandardVerbs();
+        6: Abbreviations();
+        7: AllCommunication();
+        8: MoreGames();
+    }
+];
