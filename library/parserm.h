@@ -4343,17 +4343,10 @@ Constant SCORE__DIVISOR = 20;
 
 [ TryNumber wordnum   i j c num len mul tot d digit;
     i = wn; wn = wordnum; j = NextWord(); wn = i;
-    j = NumberWord(j);
+    j = NumberWord(j); ! Test for verbal forms ONE to TWENTY
     if (j >= 1) return j;
 
-    #Ifdef TARGET_ZCODE;
-    i = wordnum*4+1; j = parse->i; num = j+buffer; len = parse->(i-1);
-    #Ifnot; ! TARGET_GLULX
-    i = wordnum*3; j = parse-->i; num = j+buffer; len = parse-->(i-1);
-    #Endif; ! TARGET_
-
-    tot=ParseNumber(num, len);
-    if (tot ~= 0) return tot;
+    num = WordAddress(wordnum); len = WordLength(wordnum);
 
     if (len >= 4) mul=1000;
     if (len == 3) mul=100;
@@ -4363,7 +4356,7 @@ Constant SCORE__DIVISOR = 20;
     tot = 0; c = 0; len = len-1;
 
     for (c=0 : c<=len : c++) {
-        digit=num->c;
+        digit=num-->c;
         if (digit == '0') { d = 0; jump digok; }
         if (digit == '1') { d = 1; jump digok; }
         if (digit == '2') { d = 2; jump digok; }
