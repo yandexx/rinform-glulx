@@ -58,6 +58,7 @@ Verb meta 'остотчет!' * -> ScriptOff;
 ! Запись команд
 
 Verb meta 'запись!'
+        *                   -> CommandsOn
 		* 'вкл'				-> CommandsOn
 		* 'выкл'			-> CommandsOff;
 
