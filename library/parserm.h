@@ -1065,7 +1065,8 @@ Object  InformParser "(Inform Parser)"
         }
         else {
             ! Trim the trailing newline
-            if ((a_buffer+WORDSIZE)-->(done-1) == 10) done = done-1;
+            if ((a_buffer+WORDSIZE)-->(done-1) == 10) done = done-1; ! LF
+            if ((a_buffer+WORDSIZE)-->(done-1) == 13) done = done-1; ! CR
             a_buffer-->0 = done;
             glk($0086, 8); ! set input style
             glk($012A, a_buffer+WORDSIZE, done); ! put_buffer
