@@ -946,7 +946,7 @@ Object  InformParser "(Inform Parser)"
     if (win == 0) win = gg_mainwin;
     if (gg_commandstr ~= 0 && gg_command_reading ~= false) {
         ! get_line_stream
-        done = glk($0091, gg_commandstr, gg_arguments, 31);
+        done = glk($0132, gg_commandstr, gg_arguments, 31);
         if (done == 0) {
             glk($0044, gg_commandstr, 0); ! stream_close
             gg_commandstr = 0;
@@ -1008,7 +1008,7 @@ Object  InformParser "(Inform Parser)"
     }
     if (gg_commandstr ~= 0 && gg_command_reading == false) {
         if (res < 32 || res >= 256 || (res == '\' or ' ')) {
-            glk($0081, gg_commandstr, '\'); ! put_buffer_char
+            glk($012B, gg_commandstr, '\'); ! put_buffer_char
             done = 0;
             jx = res;
             for (ix=0 : ix<8 : ix++) {
@@ -1019,14 +1019,14 @@ Object  InformParser "(Inform Parser)"
                 if (done) {
                     if (ch >= 0 && ch <= 9) ch = ch + '0';
                     else                    ch = (ch - 10) + 'A';
-                    glk($0081, gg_commandstr, ch); ! put_buffer_char
+                    glk($012B, gg_commandstr, ch); ! put_buffer_char
                 }
             }
         }
         else {
-            glk($0081, gg_commandstr, res); ! put_buffer_char
+            glk($012B, gg_commandstr, res); ! put_buffer_char
         }
-        glk($0081, gg_commandstr, 10); ! put_char_stream (newline)
+        glk($012B, gg_commandstr, 10); ! put_char_stream (newline)
     }
   .KCPContinue;
     return res;
@@ -1055,7 +1055,7 @@ Object  InformParser "(Inform Parser)"
 [ KeyboardPrimitive  a_buffer a_table done ix;
     if (gg_commandstr ~= 0 && gg_command_reading ~= false) {
         ! get_line_stream
-        done = glk($0091, gg_commandstr, a_buffer+WORDSIZE, (INPUT_BUFFER_LEN-WORDSIZE)-1);
+        done = glk($0132, gg_commandstr, a_buffer+WORDSIZE, (INPUT_BUFFER_LEN-WORDSIZE)-1);
         if (done == 0) {
             glk($0044, gg_commandstr, 0); ! stream_close
             gg_commandstr = 0;
@@ -1065,10 +1065,10 @@ Object  InformParser "(Inform Parser)"
         }
         else {
             ! Trim the trailing newline
-            if ((a_buffer+WORDSIZE)->(done-1) == 10) done = done-1;
+            if ((a_buffer+WORDSIZE)-->(done-1) == 10) done = done-1;
             a_buffer-->0 = done;
             glk($0086, 8); ! set input style
-            glk($0084, a_buffer+WORDSIZE, done); ! put_buffer
+            glk($012A, a_buffer+WORDSIZE, done); ! put_buffer
             glk($0086, 0); ! set normal style
             print "^";
             jump KPContinue;
@@ -1093,8 +1093,8 @@ Object  InformParser "(Inform Parser)"
     }
     if (gg_commandstr ~= 0 && gg_command_reading == false) {
         ! put_buffer_stream
-        glk($0085, gg_commandstr, a_buffer+WORDSIZE, a_buffer-->0);
-        glk($0081, gg_commandstr, 10); ! put_char_stream (newline)
+        glk($012D, gg_commandstr, a_buffer+WORDSIZE, a_buffer-->0);
+        glk($012B, gg_commandstr, 10); ! put_char_stream (newline)
     }
   .KPContinue;
     VM_Tokenise(a_buffer,a_table);

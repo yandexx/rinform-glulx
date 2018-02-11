@@ -1178,7 +1178,7 @@ Constant NOARTICLE_BIT  4096;       ! Print no articles, definite or not
     gg_scriptstr = 0;
 ];
 
-[ CommandsOnSub fref;
+[ CommandsOnSub fref has_unicode;
     if (gg_commandstr ~= 0) {
         if (gg_command_reading)
             L__M(##CommandsOn, 2);
@@ -1190,8 +1190,16 @@ Constant NOARTICLE_BIT  4096;       ! Print no articles, definite or not
     fref = glk($0062, $103, $01, 0);
     if (fref == 0) return L__M(##CommandsOn, 4);
     gg_command_reading = false;
-    ! stream_open_file
-    gg_commandstr = glk($0042, fref, $01, GG_COMMANDWSTR_ROCK);
+    
+    @gestalt 5 0 has_unicode;
+    if (has_unicode == 0) {
+        ! stream_open_file
+        gg_commandstr = glk($0042, fref, $01, GG_COMMANDWSTR_ROCK);
+    } else {
+        ! stream_open_file_uni
+        gg_commandstr = glk($0138, fref, $01, GG_COMMANDWSTR_ROCK);
+    }
+
     glk($0063, fref); ! fileref_destroy
     if (gg_commandstr == 0) return L__M(##CommandsOn, 4);
     L__M(##CommandsOn, 1);
@@ -1206,7 +1214,7 @@ Constant NOARTICLE_BIT  4096;       ! Print no articles, definite or not
     L__M(##CommandsOff, 1);
 ];
 
-[ CommandsReadSub fref;
+[ CommandsReadSub fref has_unicode;
     if (gg_commandstr ~= 0) {
         if (gg_command_reading)
             L__M(##CommandsRead, 2);
@@ -1218,8 +1226,15 @@ Constant NOARTICLE_BIT  4096;       ! Print no articles, definite or not
     fref = glk($0062, $103, $02, 0);
     if (fref == 0) return L__M(##CommandsRead, 4);
     gg_command_reading = true;
-    ! stream_open_file
-    gg_commandstr = glk($0042, fref, $02, GG_COMMANDRSTR_ROCK);
+
+    @gestalt 5 0 has_unicode;
+    if (has_unicode == 0) {
+        ! stream_open_file
+        gg_commandstr = glk($0042, fref, $02, GG_COMMANDRSTR_ROCK);
+    } else {
+        ! stream_open_file
+        gg_commandstr = glk($0138, fref, $02, GG_COMMANDRSTR_ROCK);
+    }
     glk($0063, fref); ! fileref_destroy
     if (gg_commandstr == 0) return L__M(##CommandsRead, 4);
     return L__M(##CommandsRead, 1);
