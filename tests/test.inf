@@ -1,0 +1,51 @@
+!%
+!=============================================================================
+
+Constant Story "Тестовая игра";
+Constant Headline
+    "^Тестовая игра для проверки правильной работы библиотеки.^^
+    Введите «воспр» и выберите файл test-replay.txt, затем новый файл для транскрипта.^";
+     
+Include "Parser";
+
+Include "VerbLib";
+
+!============================================================================
+[ Initialise;
+    location = main_room;
+    lookmode = 2;
+
+    print "";
+];
+
+!============================================================================
+! Описание игровых объектов
+
+Class Room has light;
+
+Room main_room "Центральная комната"
+    with description "Центральная комната.",
+    n_to room_north,
+    ne_to room_ne,
+    e_to room_east,
+    se_to room_se
+    ;
+
+Room room_north "Северная комната"
+with description "Северная комната.",
+s_to main_room;
+
+Room room_ne "Северо-восточная комната"
+with with description "Северо-восточная комната.",
+sw_to main_room;
+
+Room room_east "Восточная комната"
+with with description "Восточная комната.",
+w_to main_room;
+
+Room room_se "Юго-восточная комната"
+with with description "Юго-восточная комната.",
+nw_to main_room;
+
+!============================================================================
+Include "RussiaG";
