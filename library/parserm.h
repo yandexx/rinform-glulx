@@ -1152,7 +1152,7 @@ Object  InformParser "(Inform Parser)"
     w = a_table-->1;
     if (w == OOPS1__WD or OOPS2__WD or OOPS3__WD) jump DoOops;
 
-    if (a_buffer->WORDSIZE == COMMENT_CHARACTER) {
+    if (a_buffer-->1 == COMMENT_CHARACTER) {
         #Ifdef TARGET_ZCODE;
         if ((HDR_GAMEFLAGS-->0) & 1 || xcommsdir)
                                            L__M(##Miscellany, 54);
