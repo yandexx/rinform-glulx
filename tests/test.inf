@@ -15,7 +15,10 @@ Include "VerbLib";
     location = main_room;
     lookmode = 2;
 
-    print "";
+    move red_apple to player;
+    move dagger to player;
+    move hat to player;
+    move watch to player;
 ];
 
 !============================================================================
@@ -57,6 +60,41 @@ Room room_inside "Внутренняя комната"
 with with description "Внутренняя комната.",
 out_to main_room;
 
+!============================================================================
+
+
+Verb meta 'тест2' 'тест02' * -> Test02;
+
+[ Test02Sub;
+   PlayerTo(test02);
+];
+
+Object red_apple "красн/ое яблок/о"
+with description "Спелое красное яблоко.",
+name 'красн' 'яблок',
+has neuter;
+
+Object dagger "остр/ый клин/о/к/"
+with description "Красивый острый клинок.",
+name 'остр' 'клинок' 'клинк',
+casegen [ beg end csID;
+    return ICVowel (csID, beg, end, 'о', 0);
+],
+has male;
+
+Object hat "соломенн/ая шляп/а"
+with description "Лёгкая соломенная шляпа.",
+name 'соломенн' 'шляп',
+has female;
+
+Object watch "наручн/ые час/ы"
+with description "Наручные часы, доставшиеся тебе от прадеда.",
+name 'наручн' 'час',
+has pluralname;
+
+Room test02 "Тестовая комната"
+with description "Тестовая комната.",
+;
 
 !============================================================================
 Include "RussiaG";
