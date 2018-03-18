@@ -105,7 +105,7 @@ with description "Высокая металлическая клетка, в к�
 name 'металлическ' 'клетк',
 has female enterable transparent static;
 
-Object -> bed "кровать"
+Object -> bed "кроват/ь"
 with description "Мягкая кровать.",
 name 'кроват',
 has female enterable transparent static supporter;
