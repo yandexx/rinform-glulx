@@ -95,5 +95,10 @@ Room test02 "Тестовая комната"
 with description "Тестовая комната.",
 ;
 
+Object -> barrel "деревянн/ая бочк/а"
+with description "Деревянная бочка без верхней крышки.",
+name 'деревянн' 'бочк',
+has female container open ~openable;
+
 !============================================================================
 Include "RussiaG";
