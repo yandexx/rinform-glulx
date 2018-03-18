@@ -100,5 +100,16 @@ with description "Деревянная бочка без верхней крыш
 name 'деревянн' 'бочк',
 has female container open ~openable;
 
+Object -> cage "металлическ/ая клетк/а"
+with description "Высокая металлическая клетка, в которую можно войти.",
+name 'металлическ' 'клетк',
+has female enterable transparent static;
+
+Object -> bed "кровать"
+with description "Мягкая кровать.",
+name 'кроват',
+has female enterable transparent static supporter;
+
+
 !============================================================================
 Include "RussiaG";
