@@ -15,8 +15,72 @@
 
 ## Текущее покрытие кода тестами
 
-- [x] Навигация
-- [ ] Игровые глаголы
-- [ ] Мета-глаголы
+### Навигация
+- [x] Go, VagueGo
+- [x] Enter
+- [x] Exit
+
+### Игровые глаголы
+- [x] Yes, No, Mild, Strong
+- [x] Inv
+- [x] Look
+- [x] LookUnder
+- [x] Examine
+- [x] Search
+- [ ] Consult
+- [ ] Take
+- [ ] Remove
+- [ ] Drop
+- [ ] Insert
+- [ ] PutOn
+- [ ] ThrowAt
+- [ ] Empty
+- [ ] Wear
+- [ ] Disrobe
+- [ ] Open
+- [ ] Close
+- [ ] Unlock
+- [ ] Lock
+- [ ] SwitchOn, SwitchOff
+- [ ] SwitchOn, SwitchOff
+- [ ] Give, Show, Answer, Tell, Ask, AskTo
+- [ ] Sorry
+- [ ] Wave, WaveHands
+- [ ] Set, SetTo
+- [ ] Push, Pull, Transfer
+- [ ] Turn
+- [ ] Attack
+- [ ] Wait
+- [ ] Eat
+- [ ] Drink
+- [ ] Sleep
+- [ ] Wake, WakeOther
+- [ ] Sing
+- [ ] Sing
+- [ ] Climb
+- [ ] Buy
+- [ ] Squeeze
+- [ ] Swim
+- [ ] Swing
+- [ ] Blow
+- [ ] Pray
+- [ ] Kiss
+- [ ] Think
+- [ ] Smell
+- [ ] Listen
+- [ ] Taste
+- [ ] Touch
+- [ ] Rub
+- [ ] Tie
+- [ ] Burn
+- [ ] Fill
+- [ ] Cut
+- [ ] Jump, JumpOver
+- [ ] Dig
+- [ ] Sense
+
+### Мета-глаголы
+
+### Прочее
 - [ ] Уточнения
 - [ ] Падежные склонения
