@@ -800,6 +800,10 @@ Array gg_tokenbuf --> DICT_WORD_SIZE;
 Constant LOWERCASE_BUF_SIZE = 2*DICT_WORD_SIZE;
 Array gg_lowercasebuf --> LOWERCASE_BUF_SIZE;
 
+[ VM_CopyBuffer bto bfrom i;
+    for (i=0: i<INPUT_BUFFER_LEN: i++) bto-->i = bfrom-->i;
+];
+
 [ VM_Tokenise buf tab
     cx numwords len bx ix wx wpos wlen val res dictlen ch bytesperword uninormavail;
 
@@ -3032,7 +3036,7 @@ Constant UNLIT_BIT  =  32;
     if (first_word ~= 0) {
         j = first_word->#dict_par1;
         if (0 ~= j&1) {
-            CopyBuffer(buffer, buffer2);
+            VM_CopyBuffer(buffer, buffer2);
             return REPARSE_CODE;
         }
     }
@@ -3110,10 +3114,10 @@ Constant UNLIT_BIT  =  32;
         if (buffer->1 == INPUT_BUFFER_LEN) break;
     }
     #Ifnot; ! TARGET_GLULX
-    i = WORDSIZE + buffer-->0;
-    (buffer-->0)++; buffer->(i++) = ' ';
+    i = 1 + buffer-->0;
+    (buffer-->0)++; buffer-->(i++) = ' ';
     for (j=0 : j<buffer2-->0 : i++,j++) {
-        buffer->i = buffer2->(j+WORDSIZE);
+        buffer-->i = buffer2-->(j+1);
         (buffer-->0)++;
         if (buffer-->0 == INPUT_BUFFER_LEN) break;
     }
