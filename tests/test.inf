@@ -100,6 +100,16 @@ with description "Деревянная бочка без верхней крыш
 name 'деревянн' 'бочк',
 has female container open ~openable;
 
+Object -> -> diamond "бриллиант/"
+with description "Сверкающий бриллиант.",
+name 'бриллиант',
+has male;
+
+Object -> -> rough_diamond "алмаз/"
+with description "Грубый неотшифованный алмаз.",
+name 'алмаз',
+has male;
+
 Object -> cage "металлическ/ая клетк/а"
 with description "Высокая металлическая клетка, в которую можно войти.",
 name 'металлическ' 'клетк',
