@@ -19,6 +19,7 @@ Include "VerbLib";
     move dagger to player;
     move hat to player;
     move watch to player;
+    move bronze_key to player;
 ];
 
 !============================================================================
@@ -91,6 +92,11 @@ with description "Наручные часы, доставшиеся тебе о�
 name 'наручн' 'час',
 has pluralname;
 
+Object bronze_key "бронзов/ый ключ/"
+with description "Бронзовый ключ.",
+name 'бронз' 'ключ',
+has male;
+
 Room test02 "Тестовая комната"
 with description "Тестовая комната.",
 ;
@@ -119,6 +125,12 @@ Object -> bed "кроват/ь"
 with description "Мягкая кровать.",
 name 'кроват',
 has female enterable transparent static supporter;
+
+Object -> chest "сундук/"
+with description "Тяжёлый деревянный сундук с отверстием для ключа стоит на полу.",
+name 'сундук',
+with_key bronze_key,
+has male static openable ~open lockable ~locked;
 
 
 !============================================================================
