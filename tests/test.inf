@@ -85,6 +85,9 @@ has male;
 Object hat "соломенн/ая шляп/а"
 with description "Лёгкая соломенная шляпа.",
 name 'соломенн' 'шляп',
+before [;
+    Turn: "Ты вертишь шляпу на пальце.";
+],
 has female;
 
 Object watch "наручн/ые час/ы"
