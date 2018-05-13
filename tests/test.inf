@@ -132,6 +132,10 @@ name 'сундук',
 with_key bronze_key,
 has male static openable ~open lockable ~locked;
 
+Object -> "крестьянк/а"
+with
+name 'крестьянк',
+has female animate;
 
 !============================================================================
 Include "RussiaG";
