@@ -140,5 +140,10 @@ with
 name 'крестьянк',
 has female animate;
 
+Object -> "повар"
+with
+name 'повар',
+has male animate;
+
 !============================================================================
 Include "RussiaG";
