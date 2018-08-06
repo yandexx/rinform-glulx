@@ -1028,9 +1028,13 @@ Constant COMMA__TX      = ", ";
                3: "Если тебе очень хочется.";
            }
 
-  Dig:            print "Копать ", (cAcc) x1;
-		  if (second ~= 0) print " ", (cIns) second;
-		  " бессмысленно.";
+  Dig:
+      if (noun == 0) {
+        "Копать здесь бессмысленно.";
+      }
+      print "Копать ", (cAcc) x1;
+      if (second ~= 0) print " ", (cIns) second;
+      " бессмысленно.";
 
   Cut:            "Резать ", (cAcc) x1, " бессмысленно.";
 
