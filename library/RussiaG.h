@@ -359,12 +359,12 @@ Object "встать" VerbDepot
 	with name 'вст' 'вста';
 
 ! "сесть"/"лечь"
-Verb	'сесть' 'сяд' 'сад'
-	'леч' 'ляг'
+Verb	'сесть' 'усесться' 'сяд' 'сад'
+	'леч' 'ляг' 
                 * 'на'/'в'/'во' cAcc_noun		-> Enter;
 
 Object "сесть" VerbDepot
-	with name 'сесть' 'сяд' 'сад';
+	with name 'сесть' 'усесться' 'сяд' 'сад';
 
 Object "лечь" VerbDepot
 	with name 'леч' 'ляг';
