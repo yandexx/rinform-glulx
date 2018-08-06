@@ -776,9 +776,10 @@ Object "думать" VerbDepot
 	with name 'дум'	'мысл' 'мышл';
 
 ! "нюхать"/"нюхнуть"
-Verb	'нюх'
-                *				-> Smell
-                * cAcc_noun			-> Smell;
+Verb 'нюх'
+                *               -> Smell
+                * cAcc_noun	    -> Smell
+                * 'к' cDat_noun -> Smell; ! "принюхаться"
 
 Object "нюхать" VerbDepot
 	with name 'нюх';
