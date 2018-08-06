@@ -259,7 +259,7 @@ Array LanguageNumbers table
 [ LanguageToInformese
   i;
 
-  glk_buffer_to_lower_case_uni(buffer, INPUT_BUFFER_LEN, buffer-->0*WORDSIZE);
+  glk_buffer_to_lower_case_uni(buffer, INPUT_BUFFER_LEN, buffer-->0);
   for (i=1: i <= buffer-->0: i++) { 
     if (buffer-->i == 'ё') {
       buffer-->i = 'е';
