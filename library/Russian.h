@@ -774,7 +774,7 @@ Constant COMMA__TX      = ", ";
                8: print_ret (CCNom) x1, " недосягаем", (SAEnd) x1, ".";
                9: print_ret (CCNom) x1, " закрыт", (SAEnd) x1, ".";
               10: print_ret (CCAcc) x1, " невозможно взять.";
-              11: print_ret (CCNom) x1, " жёстко закреплён", (SAEnd) x1, ".";
+              11: print_ret (CCNom) x1, " жёстко закреплен", (SAEnd) x1, ".";
               12: "У тебя с собой слишком много вещей.";
               13: "(укладывая ", (cAcc) x1, " внутрь ", (cGen) SACK_OBJECT,
                   ", чтобы освободить место)";
