@@ -899,7 +899,7 @@ Constant COMMA__TX      = ", ";
                   ".";
                5, 6:
                   if (x1~=location)
-                     print (string) IIF (x1 has supporter, "^На ", "^В "), (cPre) x1, " ";
+                     print (string) IIF (x1 has supporter, "^На ", "^В "), (cPre) x1;
                   else print "^Здесь";
                   if (n==5) print " также";
                   WriteListFromCase (child(x1),
