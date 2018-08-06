@@ -28,29 +28,29 @@
 - [x] Examine
 - [x] Search
 - [ ] Consult
-- [ ] Take
-- [ ] Remove
-- [ ] Drop
-- [ ] Insert
-- [ ] PutOn
-- [ ] ThrowAt
-- [ ] Empty
-- [ ] Wear
-- [ ] Disrobe
-- [ ] Open
-- [ ] Close
-- [ ] Unlock
-- [ ] Lock
-- [ ] SwitchOn, SwitchOff
-- [ ] SwitchOn, SwitchOff
-- [ ] Give, Show, Answer, Tell, Ask, AskTo
-- [ ] Sorry
-- [ ] Wave, WaveHands
-- [ ] Set, SetTo
-- [ ] Push, Pull, Transfer
-- [ ] Turn
-- [ ] Attack
-- [ ] Wait
+- [x] Take
+- [x] Remove
+- [x] Drop
+- [x] Insert
+- [x] PutOn
+- [x] ThrowAt
+- [x] Empty
+- [x] Wear
+- [x] Disrobe
+- [x] Open
+- [x] Close
+- [x] Unlock
+- [x] Lock
+- [x] SwitchOn, SwitchOff
+- [x] SwitchOn, SwitchOff
+- [x] Give, Show, Answer, Tell, Ask, AskTo
+- [x] Sorry
+- [x] Wave, WaveHands
+- [x] Set, SetTo
+- [x] Push, Pull, Transfer
+- [x] Turn
+- [x] Attack
+- [x] Wait
 - [ ] Eat
 - [ ] Drink
 - [ ] Sleep
