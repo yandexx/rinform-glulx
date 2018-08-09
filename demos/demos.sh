@@ -1,4 +1,4 @@
-inform +../library,../libext +language_name=Russian -DG -Cu \$DICT_CHAR_SIZE=4 AdventR.inf AdventR.ulx
+inform +../library,../libext +language_name=Russian -DG -Cu \$DICT_CHAR_SIZE=4 \$MAX_UNICODE_CHARS=128 AdventR.inf AdventR.ulx
 inform +../library +language_name=Russian -DG -Cu \$DICT_CHAR_SIZE=4 Heidi.inf Heidi.ulx
 inform +../library +language_name=Russian -DG -Cu \$DICT_CHAR_SIZE=4 AliceR.inf AliceR.ulx
 inform +../library +language_name=Russian -DG -Cu \$DICT_CHAR_SIZE=4 CloakR.inf CloakR.ulx
