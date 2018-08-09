@@ -16,7 +16,7 @@ System_file;
 !   Часть I.   Введение
 ! ---------------------------------------------------------------------------
 
-Constant LanguageVersion = "@<<Информ@>>: Русская версия Glulx v0.9.0 (бета), 2018-02-13";
+Constant LanguageVersion = "@<<Информ@>>: Русская версия Glulx v0.9.0, 2018-08-09";
 
 !
 ! Unluckily, there is no conditional operator in Inform.
