@@ -1,0 +1,19 @@
+Release 1;
+
+Include "Parser";
+Include "VerbLib";
+
+[ Initialise;
+];
+
+Include "RussiaG";
+
+Verb meta 'тест' * -> Test01;
+Verb meta 'тест2' 'тест02' * -> Test02;
+
+[ Test01Sub;
+    print_ret "Работает.";
+];
+[ Test02Sub;
+    print_ret "Всё ещё работает.";
+];
