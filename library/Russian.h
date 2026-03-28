@@ -464,8 +464,8 @@ Constant ARE__TX      = " находятся";
 Constant IS2__TX      = "находится ";
 Constant ARE2__TX     = "находятся ";
 Constant AND__TX      = " и ";
-Constant WHOM__TX     = "кто ";
-Constant WHICH__TX    = "где ";
+Constant WHOM__TX     = "";
+Constant WHICH__TX    = "";
 Constant COMMA__TX      = ", ";
 
 ! Cимвольный идентификатор для грамматической категории
@@ -662,10 +662,11 @@ Constant COMMA__TX      = ", ";
               16: print " и пуст", (SAEnd) x1;
               17: print " (пуст", (SAEnd) x1, ")";
               18: print " содерж", (V2aEnd) x1, " ";
-              19: print " (на ";
-              20: print ", над ";
+              19: print " (на ";  WhomTX(x1);
+              20: print ", на ";  WhomTX(x1);
               21: print " (";
-              22: print ", внутри ";
+                  if (x1 has animate) WhomTX(x1); else print "где ";
+              22: print ", внутри "; WhomTXGen(x1);
            }
 
   Pronouns: switch(n)

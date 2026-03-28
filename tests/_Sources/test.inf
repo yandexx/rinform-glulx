@@ -118,5 +118,25 @@ with description "Маленький оловянный солдатик.",
 name 'оловянн' 'солдатик',
 has male anim_grammar;
 
+Object -> white_cat "бел/ая кошк/а"
+with
+name 'бел' 'кошк',
+has female animate supporter transparent static;
+
+Object -> -> collar "ошейник/"
+with
+name 'ошейник',
+has male;
+
+Object -> black_cat "чёрн/ый кот/"
+with
+name 'чёрн' 'кот',
+has male animate supporter transparent static;
+
+Object -> -> bell "колокольчик/"
+with
+name 'колокольчик',
+has male;
+
 !============================================================================
 Include "RussiaG";
