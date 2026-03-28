@@ -58,6 +58,7 @@ Array  Tparse --> Tlimit;
 ];
 
 Attribute fem_grammar;      ! (тип склонения женского рода)
+Attribute anim_grammar;     ! (тип склонения одушевленного предмета)
 
 Property casegen;     ! (необязательный собственный генератор падежей объекта)
 
@@ -718,7 +719,7 @@ Global csLRU = 0;
 
   ! Для мужских одушевленных предметов Acc -> Gen
   csID = csLR;
-  if (csID == csAcc && obj has animate && obj has male && obj hasnt fem_grammar)
+  if (csID == csAcc && (obj has animate || obj has anim_grammar) && obj has male && obj hasnt fem_grammar)
     csID = csGen;
 
   for (end = len: end ~= 0: -- end) {
@@ -779,7 +780,7 @@ Array Scratch --> ScrLen;
   }
 
   ! Для мужских одушевленных предметов Acc -> Gen
-  if (csID == csAcc && obj has animate && 
+  if (csID == csAcc && (obj has animate || obj has anim_grammar) &&
       obj has male && obj hasnt fem_grammar)
     csID = csGen;
 

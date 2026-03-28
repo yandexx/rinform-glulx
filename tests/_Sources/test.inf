@@ -113,5 +113,10 @@ with
 name 'повар',
 has male animate;
 
+Object -> toy_soldier "оловянн/ый солдатик/"
+with description "Маленький оловянный солдатик.",
+name 'оловянн' 'солдатик',
+has male anim_grammar;
+
 !============================================================================
 Include "RussiaG";

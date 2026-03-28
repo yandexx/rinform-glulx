@@ -49,7 +49,7 @@ Object bird "птенчик/" forest
                     Надо помочь!^";
                 return true;
         ],
-    has male;
+    has male anim_grammar;
 
 Object clearing "Полянка"
     with description
