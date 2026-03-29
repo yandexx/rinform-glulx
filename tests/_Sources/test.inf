@@ -103,10 +103,23 @@ name 'сундук',
 with_key bronze_key,
 has male static openable ~open lockable ~locked;
 
-Object -> "крестьянк/а"
+Object -> peasant_woman "крестьянк/а"
 with
 name 'крестьянк',
+orders [;
+    Give:
+        if (noun && noun in self) {
+            move noun to player;
+            print_ret (CCNom) peasant_woman, " даёт тебе ", (cAcc) noun, ".";
+        }
+        rfalse;
+],
 has female animate;
+
+Object -> -> bread "хлеб/"
+with description "Ломоть свежего хлеба.",
+name 'хлеб',
+has male;
 
 Object -> "повар"
 with
