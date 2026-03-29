@@ -1,0 +1,58 @@
+Constant Story "Тест на падежи";
+Constant Headline
+    "^Тестовая игра для проверки склонения объектов.^";
+
+Include "Parser";
+Include "VerbLib";
+
+[ Initialise;
+    location = main_room;
+    lookmode = 2;
+];
+
+Class Room has light;
+
+Room main_room "Площадь"
+    with description "Деревенская площадь.";
+
+! Множественное одушевленное (м.р.): "осм жителей"
+! жител + ей (PL_Req class 3 gen)
+Object villagers "местн/ые жител/и" main_room
+with description "Горный народ, такой же, как и ты.",
+name 'местн' 'жител',
+has animate pluralname;
+
+! Множественное одушевленное (ж.р.): "осм мышей"
+! мыш + ей (PL_Req class 3 gen)
+Object mice "сер/ые мыш/и" main_room
+with description "Стайка серых мышей.",
+name 'сер' 'мыш',
+has female animate pluralname;
+
+! Множественное одушевленное (ср.р.): "осм животных"
+! животн + ых (PL_Req class 64 gen)
+Object animals "дик/ие животн/ые" main_room
+with description "Дикие звери из леса.",
+name 'дик' 'животн',
+has neuter animate pluralname;
+
+! Множественное неодушевленное (м.р.): "осм камни"
+Object stones "тяжёл/ые камн/и" main_room
+with description "Тяжёлые камни на площади.",
+name 'тяжёл' 'камн',
+has pluralname;
+
+! Множественное неодушевленное (ж.р.): "осм книги"
+Object books "стар/ые книг/и" main_room
+with description "Стопка старых книг.",
+name 'стар' 'книг',
+has female pluralname;
+
+! Множественное неодушевленное (ср.р.): "осм окна"
+Object windows "разбит/ые окн/а" main_room
+with description "Окна давно разбиты.",
+name 'разбит' 'окн',
+has neuter pluralname;
+
+!============================================================================
+Include "RussiaG";
