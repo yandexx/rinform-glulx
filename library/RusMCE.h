@@ -717,9 +717,11 @@ Global csLRU = 0;
     rfalse;
   }
 
-  ! Для мужских одушевленных предметов Acc -> Gen
+  ! Для одушевленных предметов Acc -> Gen
+  ! (мужской род или множественное число)
   csID = csLR;
-  if (csID == csAcc && (obj has animate || obj has anim_grammar) && obj has male && obj hasnt fem_grammar)
+  if (csID == csAcc && (obj has animate || obj has anim_grammar) &&
+      (obj has male && obj hasnt fem_grammar || obj has pluralname))
     csID = csGen;
 
   for (end = len: end ~= 0: -- end) {
@@ -779,9 +781,10 @@ Array Scratch --> ScrLen;
     default:  return;
   }
 
-  ! Для мужских одушевленных предметов Acc -> Gen
+  ! Для одушевленных предметов Acc -> Gen
+  ! (мужской род или множественное число)
   if (csID == csAcc && (obj has animate || obj has anim_grammar) &&
-      obj has male && obj hasnt fem_grammar)
+      (obj has male && obj hasnt fem_grammar || obj has pluralname))
     csID = csGen;
 
   if (csID ~= 0) {
