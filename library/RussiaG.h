@@ -334,6 +334,7 @@ Object "идти" VerbDepot
 ! "войти", "зайти"
 Verb	'вой' 'войд' 'зай' 'зайд'
                 *					-> GoIn
+                * noun=ADirection			-> Go
                 * 'в'/'во'/'на' cAcc_noun		-> Enter;
 
 Object "войти" VerbDepot
