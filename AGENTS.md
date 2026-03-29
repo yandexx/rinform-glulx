@@ -49,6 +49,7 @@ Tests use Andrew Plotkin's `regtest.py` framework. Located in `tests/`.
 | `_Sources/walking.inf` | `_Tests/walking.test` | All 14 directions × 10 movement verbs, abbreviations, hyphenated/non-hyphenated forms |
 | `_Sources/basic_meta_verbs.inf` | `_Tests/basic_meta_verbs.test` | `тест`/`тест2` meta verbs. Quit/restart marked TODO (hard to test with regtest) |
 | `_Sources/ambiguity.inf` | `_Tests/ambiguity.test` | Pronoun resolution, disambiguation, NPC commands, gender variants |
+| `_Sources/declension.inf` | `_Tests/declension.test` | Plural accusative for animate (m/f/n) and non-animate (m/f/n) objects |
 
 ### Running tests
 
@@ -62,7 +63,6 @@ python3 ./regtest.py _Tests/ambiguity.test --vital
 
 ### Known test issues
 
-- `ambiguity.test`: The `дать это` check expects "кофе" but gets "странная статуя" — pronoun "это" resolves to last-manipulated object. Considered acceptable.
 - Quit/restart/version commands are not tested (TODO in test files).
 
 ## Russian Declension System
@@ -114,9 +114,35 @@ This is controlled by `ListMiscellany` messages 19-22 in `Russian.h` and the con
 
 `WhomTXIns` is defined but not currently used (message 20 was changed from "над" to "на", so it uses `WhomTX`). It's available if a future change needs instrumental case.
 
-### Known limitation
+### Plural animate Acc→Gen redirect
 
-Plural animate nouns (`has pluralname animate`) do NOT get Acc→Gen redirect — the check only fires for `has male`. Plural animate accusative (e.g. "видишь солдатов" vs "видишь солдаты") is not handled.
+Since PR #15 fix, plural animate nouns (`has pluralname animate`) DO get Acc→Gen redirect, same as singular masculine animate. The condition in both `LanguageRefers` and `CCase` is:
+
+```
+if (csID == csAcc && (obj has animate || obj has anim_grammar) &&
+    (obj has male && obj hasnt fem_grammar || obj has pluralname))
+  csID = csGen;
+```
+
+This applies regardless of the object's gender attribute — `male`, `female`, or `neuter` plurals all get the redirect if they are `animate` (or `anim_grammar`).
+
+### Parser: verb recognition and case grammar
+
+`LanguageIsVerb` (RusMCE.h ~line 650) recognizes Russian verbs by decomposing them into optional prefix + stem + optional suffix. For example, "осмотреть" → prefix "о" + stem "смотр" + suffix "еть". The prefix list is in `IsVerbPrefix`, the suffix validation in `IsVerbSuffix`. The stem is looked up in the dictionary.
+
+Verb grammar lines use case-specific token functions like `cAcc_noun`, `cNom_noun`, `cGen_noun` (defined in RussiaG.h). These call `c_token(TOKEN_TYPE, csID)` which sets the global `csLR` to the requested case before parsing the noun phrase. `LanguageRefers` then uses `csLR` to determine which endings to accept.
+
+Important: grammar lines with bare `noun`/`multi` (no case prefix) leave `csLR == 0`. In `EndingLookup`, `csID == 0` means "any case is acceptable" — the parser will match any valid ending. This is why "взять жителей" works even without the Acc→Gen fix: the `Take` verb has `* multi -> Take` which is caseless.
+
+### Parser: EndingLookup permissiveness
+
+`EndingLookup` (RusMCE.h ~line 560) tries ALL four gender/number tables (SM_Req → SF_Req → SN_Req → PL_Req) regardless of the object's actual gender. This means a zero-length ending (stem = full dictionary word) matches any case that has a zero ending in ANY table — notably nominative/accusative in SM_Req class 0. This is why bare stems like "существ" parse successfully even in accusative context via the `cNom_noun` grammar path.
+
+### Declension table limitations
+
+The PL_Req table does not cover all genitive plural patterns. In particular:
+- **Fleeting vowels** (e.g. "кошка" → gen pl "кошек") cannot be represented — 'ек' is not a standard ending in any table. Objects with such patterns need a `casegen` property for correct genitive forms.
+- **Zero genitive plural** (e.g. "окно" → gen pl "окон") works for parsing only when the stem equals the full word, via the cNom_noun fallback, not via Acc→Gen redirect.
 
 ## Modifying the library
 
