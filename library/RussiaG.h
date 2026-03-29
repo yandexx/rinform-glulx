@@ -6,8 +6,9 @@
 !
 !  Supplied for use with Inform 6 Release 6/11
 !
-!   (C) Grankin Andrey 2002
-!   (C) Gayev Denis 2003-2004
+!   Copyright (C) 2002 Grankin Andrey
+!   Copyright (C) 2003, 2004 Gayev Denis
+!   SPDX-License-Identifier: LGPL-2.0-only
 !
 !  Based on: English grammar Release 6/11 Serial number 040227
 !

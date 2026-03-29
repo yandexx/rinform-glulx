@@ -3,8 +3,10 @@
 !   RUSSIAN: Language Definition File for Inform 6
 !   Source encoding: UTF-8 without BOM
 !
-!   Copyright (C) Grankin Andrey 2002, Gayev Denis 2003-2004
-!                 Vsevolod Zubarev 2010-2018
+!   Copyright (C) 2002 Grankin Andrey
+!   Copyright (C) 2003, 2004 Gayev Denis
+!   Copyright (C) 2010, 2017, 2018 Vsevolod Zubarev
+!   SPDX-License-Identifier: LGPL-2.0-only
 !
 !   Based on:
 !	English Release 6/11 Serial number 040227
