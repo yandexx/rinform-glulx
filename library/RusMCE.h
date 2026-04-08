@@ -695,6 +695,16 @@ Global csLRU = 0;
   csLR = csID;
   csLRU = csID; ! последний падеж, который вызывался
 
+  ! Для обратного порядка слов (напр. "взять из бочки всё"):
+  ! когда multiinside/multiexcept стоит после существительного,
+  ! механизм предпросмотра (look-ahead) парсера не срабатывает,
+  ! т.к. он работает только с ELEMENTARY_TT токенами на первой позиции.
+  ! Устанавливаем advance_warning из уже разобранного существительного,
+  ! чтобы парсер правильно определял область видимости для "всё".
+  if ((idtok == MULTIINSIDE_TOKEN or MULTIEXCEPT_TOKEN)
+      && advance_warning == NULL && parameters >= 1 && inputobjs-->2 >= 2)
+    advance_warning = inputobjs-->2;
+
   retval = ParseToken (ELEMENTARY_TT, idtok);
 
   csLR = 0;
